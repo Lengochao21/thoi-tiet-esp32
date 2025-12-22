@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(180deg, #1a2a6c 0%, #2a4858 50%, #000000 100%);
+            background-attachment: fixed; color: white;
+            display: flex; justify-content: center; min-height: 100vh;
+        }
+        .container { width: 100%; max-width: 400px; padding: 50px 20px; text-align: center; }
+        .city-name { font-size: 35px; font-weight: 400; margin: 0; }
+        .location-tag { font-size: 14px; opacity: 0.7; background: rgba(255,255,255,0.15); padding: 3px 15px; border-radius: 20px; display: inline-block; margin-top: 5px; }
+        .temp-main { font-size: 96px; font-weight: 200; margin: 15px 0; }
+        .condition { font-size: 20px; margin-bottom: 35px; opacity: 0.9; }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .card {
+            padding: 20px; border-radius: 24px; text-align: left;
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        .card-title { font-size: 11px; font-weight: 600; opacity: 0.8; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; text-transform: uppercase; }
+        .card-value { font-size: 26px; font-weight: 500; }
+
+        /* Màu sắc Card theo phong cách bạn yêu cầu */
+        .c-blue { background: rgba(0, 122, 255, 0.25); }
+        .c-teal { background: rgba(48, 209, 88, 0.25); }
+        .c-yellow { background: rgba(255, 159, 10, 0.25); }
+        .c-purple { background: rgba(175, 82, 222, 0.25); }
+
+        .footer { margin-top: 40px; font-size: 13px; opacity: 0.6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="city-name" id="city">Đang tải...</h1>
+        <div class="location-tag">Mân Thái</div>
+        <div class="temp-main" id="out-temp">--°</div>
+        <div class="condition" id="out-desc">Đang cập nhật...</div>
+
+        <div class="grid">
+            <div class="card c-blue">
+                <div class="card-title"><i class="fas fa-home"></i> Nhiệt độ nhà</div>
+                <div class="card-value"><span id="local-temp">--</span>°C</div>
+            </div>
+            <div class="card c-teal">
+                <div class="card-title"><i class="fas fa-droplet"></i> Độ ẩm nhà</div>
+                <div class="card-value"><span id="local-humi">--</span>%</div>
+            </div>
+            <div class="card c-yellow">
+                <div class="card-title"><i class="fas fa-sun"></i> Chỉ số UV</div>
+                <div class="card-value">Thấp</div>
+            </div>
+            <div class="card c-purple">
+                <div class="card-title"><i class="fas fa-wind"></i> Gió</div>
+                <div class="card-value"><span id="wind-speed">--</span> <small>km/h</small></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <i class="fas fa-sync-alt"></i> Cập nhật lúc: <span id="time">--:--</span>
+        </div>
+    </div>
+
+    <script>
+        async function fetchData() {
+            try {
+                const response = await fetch('/api/data');
+                const data = await response.json();
+                
+                // Cập nhật dữ liệu OpenWeatherMap
+                if (data.forecast) {
+                    const current = data.forecast[0];
+                    document.getElementById('city').innerText = data.city;
+                    document.getElementById('out-temp').innerText = Math.round(current.main.temp) + '°';
+                    document.getElementById('out-desc').innerText = current.weather[0].description;
+                    document.getElementById('wind-speed').innerText = current.wind.speed;
+                }
+
+                // Cập nhật dữ liệu từ ESP32
+                document.getElementById('local-temp').innerText = data.local.temp;
+                document.getElementById('local-humi').innerText = data.local.humi;
+
+                // Cập nhật thời gian
+                document.getElementById('time').innerText = new Date().toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+            } catch (err) { console.error("Lỗi:", err); }
+        }
+        setInterval(fetchData, 5000);
+        fetchData();
+    </script>
+</body>
+</html>
