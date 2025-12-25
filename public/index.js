@@ -1,90 +1,65 @@
-// Cập nhật mã API Key từ ảnh image_c55b57.png của Hào
-const API_KEY = "a216f02f9004f6fedecea80b73fc8632"; 
+const API_KEY = "a216f02f9004f6fedecea80b73fc8632"; // Key của Hào
 
-async function handleLocationChange() {
-    const mode = document.getElementById('locationSelect').value;
-    
-    if (mode === "my_station") {
-        fetchFromMyStation();
-    } else {
-        fetchFromOpenWeather(mode);
-    }
+// Tìm kiếm thành phố bất kỳ
+async function searchCity() {
+    const city = document.getElementById('cityInput').value;
+    if (!city) return;
+    fetchWeather(city);
 }
 
-// Lấy dữ liệu thực tế từ ESP32 thông qua Backend
-async function fetchFromMyStation() {
+// Lấy lại dữ liệu từ trạm thực tế của bạn
+async function loadMyStation() {
     try {
-        const response = await fetch('/get-sensor');
-        const data = await response.json();
+        const res = await fetch('/get-sensor');
+        const data = await res.json();
         
-        // Hiển thị lên các thẻ HTML tương ứng
-        document.getElementById('temp').innerText = data.temp || "--";
-        document.getElementById('humi').innerText = data.humi || "--";
-        document.getElementById('aqi').innerText = data.ppm || "0";
+        // Hiển thị dữ liệu thực
+        document.getElementById('cityName').innerHTML = '<i class="fa-solid fa-house-signal"></i> TRẠM CỦA TÔI';
+        document.getElementById('tempMain').innerText = data.temp || "--";
+        document.getElementById('humiVal').innerText = (data.humi || "--") + "%";
+        document.getElementById('aqiVal').innerText = data.ppm || "0";
+        updateAQI(data.ppm);
         
-        // Cập nhật màu sắc AQI
-        updateAQIStatus(data.ppm);
-        
-        // Lấy bù dữ liệu gió và UV cho vị trí trạm từ OpenWeatherMap
-        fetchBackupWeatherData("Da Nang"); 
-    } catch (error) {
-        console.error("Lỗi khi kết nối với Server Backend:", error);
-    }
+        // Lấy bù thông tin gió/uv từ API cho vị trí trạm (Da Nang)
+        fetchExternalDataOnly("Da Nang");
+    } catch (e) { console.error("Lỗi trạm"); }
 }
 
-// Lấy dữ liệu thời tiết cho các thành phố khác qua API
-async function fetchFromOpenWeather(city) {
+async function fetchWeather(city) {
     const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${API_KEY}&lang=vi`;
-    
     try {
         const res = await fetch(url);
         const data = await res.json();
         
-        document.getElementById('temp').innerText = Math.round(data.main.temp);
-        document.getElementById('humi').innerText = data.main.humidity;
-        document.getElementById('wind').innerText = data.wind.speed;
-        document.getElementById('rainStatus').innerText = data.weather[0].description.toUpperCase();
+        document.getElementById('cityName').innerHTML = `<i class="fa-solid fa-location-dot"></i> ${data.name}`;
+        document.getElementById('tempMain').innerText = Math.round(data.main.temp);
+        document.getElementById('humiVal').innerText = data.main.humidity + "%";
+        document.getElementById('windVal').innerText = data.wind.speed + " m/s";
+        document.getElementById('weatherDesc').innerText = data.weather[0].description;
         
-        // Giả lập chỉ số AQI dựa trên mây
-        let mockAQI = Math.floor(data.clouds.all * 1.2 + 10);
-        document.getElementById('aqi').innerText = mockAQI;
-        updateAQIStatus(mockAQI);
-        
-        // Giả lập UV
-        document.getElementById('uv').innerText = (Math.random() * 6 + 1).toFixed(1);
-    } catch (e) {
-        console.error("Lỗi API OpenWeatherMap!");
-    }
+        // AQI giả lập từ mây
+        let aqi = Math.floor(data.clouds.all * 1.5 + 10);
+        document.getElementById('aqiVal').innerText = aqi;
+        updateAQI(aqi);
+        document.getElementById('uvVal').innerText = (Math.random() * 3 + 1).toFixed(1);
+    } catch (e) { alert("Không tìm thấy thành phố!"); }
 }
 
-// Hàm phụ để lấy Gió/UV cho trạm đo
-async function fetchBackupWeatherData(city) {
+async function fetchExternalDataOnly(city) {
     const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${API_KEY}`;
-    try {
-        const res = await fetch(url);
-        const data = await res.json();
-        document.getElementById('wind').innerText = data.wind.speed;
-        document.getElementById('uv').innerText = "4.5"; // Mặc định cho trạm
-        document.getElementById('rainStatus').innerText = data.weather[0].description.toUpperCase();
-    } catch (e) {}
+    const res = await fetch(url);
+    const data = await res.json();
+    document.getElementById('windVal').innerText = data.wind.speed + " m/s";
+    document.getElementById('uvVal').innerText = "1.0";
+    document.getElementById('weatherDesc').innerText = data.weather[0].description;
 }
 
-// Cập nhật trạng thái màu sắc AQI
-function updateAQIStatus(val) {
-    const status = document.getElementById('aqiStatus');
-    if (val < 50) {
-        status.innerText = "CHẤT LƯỢNG: TỐT";
-        status.style.background = "#10b981";
-    } else if (val < 150) {
-        status.innerText = "CHẤT LƯỢNG: TRUNG BÌNH";
-        status.style.background = "#f59e0b";
-    } else {
-        status.innerText = "CHẤT LƯỢNG: Ô NHIỄM";
-        status.style.background = "#ef4444";
-    }
+function updateAQI(val) {
+    const badge = document.getElementById('aqiStatus');
+    if (val < 50) { badge.innerText = "TỐT"; badge.style.background = "#10b981"; badge.style.color = "white"; }
+    else if (val < 150) { badge.innerText = "TRUNG BÌNH"; badge.style.background = "#f59e0b"; badge.style.color = "black"; }
+    else { badge.innerText = "Ô NHIỄM"; badge.style.background = "#ef4444"; badge.style.color = "white"; }
 }
 
-// Khởi chạy
-handleLocationChange();
-// Tự động làm mới mỗi 20 giây
-setInterval(handleLocationChange, 20000);
+// Mặc định load trạm khi mở trang
+loadMyStation();

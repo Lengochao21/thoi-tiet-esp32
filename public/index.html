@@ -3,196 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đồ Án Tốt Nghiệp - UTE Weather Station</title>
+    <title>UTE Weather Station - DATN</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
-    
     <style>
         :root {
-            --primary: #38bdf8;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --bg: #0f172a;
-            --card-bg: rgba(30, 41, 59, 0.7);
+            --bg-body: #0b131e;
+            --bg-card: #1b2635;
+            --accent: #38bdf8;
+            --text-main: #ffffff;
+            --text-sub: #94a3b8;
         }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background: radial-gradient(circle at top right, #1e293b, #0f172a);
-            color: #f8fafc;
-            min-height: 100vh;
-            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0; padding: 20px;
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+
+        /* Search Bar */
+        .search-container {
+            display: flex; gap: 10px; margin-bottom: 30px;
+        }
+        #cityInput {
+            flex: 1; padding: 12px 20px; border-radius: 10px;
+            border: 1px solid #2d3748; background: var(--bg-card);
+            color: white; outline: none;
+        }
+        .btn-search {
+            padding: 10px 25px; border-radius: 10px; border: none;
+            background: var(--accent); color: #000; font-weight: bold; cursor: pointer;
         }
 
-        .container { max-width: 1200px; margin: 0 auto; }
+        /* Main Weather Card */
+        .main-weather {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            padding: 40px; border-radius: 24px; display: flex;
+            justify-content: space-between; align-items: center; margin-bottom: 25px;
+        }
+        .location-info h2 { font-size: 2rem; margin: 0; }
+        .temp-big { font-size: 6rem; font-weight: 800; margin: 10px 0; }
 
-        /* Header Chuyên Nghiệp */
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid rgba(56, 189, 248, 0.3);
+        /* Grid Stats */
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
         }
-        .header h1 {
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-            color: var(--primary);
-            margin-bottom: 10px;
-        }
-        .header h2 {
-            font-size: 2.2rem;
-            font-weight: 800;
-            background: linear-gradient(to right, #fff, #38bdf8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        /* Thanh chọn địa điểm */
-        .controls {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 40px;
-        }
-        #locationSelect {
-            background: var(--card-bg);
-            color: white;
-            border: 2px solid var(--primary);
-            padding: 12px 30px;
-            border-radius: 50px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: 0.3s;
-            outline: none;
-        }
-        #locationSelect:hover { box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
-
-        /* Lưới Dashboard */
-        .dashboard {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 25px;
-        }
-
         .card {
-            background: var(--card-bg);
-            backdrop-filter: blur(12px);
-            padding: 35px;
-            border-radius: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            text-align: center;
-            transition: all 0.4s ease;
+            background: var(--bg-card); padding: 25px; border-radius: 20px;
+            display: flex; flex-direction: column; gap: 10px;
         }
-        .card:hover {
-            transform: translateY(-10px);
-            border-color: var(--primary);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-        }
-
-        .card i {
-            font-size: 3.5rem;
-            margin-bottom: 20px;
-            background: linear-gradient(45deg, #fff, var(--primary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .card .label {
-            display: block;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            opacity: 0.5;
-            margin-bottom: 10px;
-        }
-
-        .card .value {
-            font-size: 3.2rem;
-            font-weight: 800;
-            margin-bottom: 15px;
-        }
-
-        .card .unit { font-size: 1.2rem; opacity: 0.7; font-weight: 400; }
-
-        /* Badge AQI */
-        .status-badge {
-            display: inline-block;
-            padding: 8px 20px;
-            border-radius: 100px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            background: var(--success);
-        }
-
-        .forecast-text {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-top: 20px;
-            color: var(--primary);
+        .card i { color: var(--accent); font-size: 1.2rem; }
+        .card .label { color: var(--text-sub); text-transform: uppercase; font-size: 0.75rem; font-weight: 600; }
+        .card .value { font-size: 1.8rem; font-weight: bold; }
+        
+        .aqi-badge {
+            display: inline-block; padding: 4px 12px; border-radius: 8px;
+            font-size: 0.7rem; font-weight: bold; width: fit-content;
         }
 
         .footer {
-            text-align: center;
-            margin-top: 60px;
-            padding: 20px;
-            opacity: 0.3;
-            font-size: 0.8rem;
+            text-align: center; margin-top: 50px; padding: 20px;
+            border-top: 1px solid #1e293b; color: var(--accent); font-size: 0.85rem;
         }
     </style>
 </head>
 <body>
+    <div class="container">
+        <div class="search-container">
+            <input type="text" id="cityInput" placeholder="Nhập tên thành phố (vd: Da Nang, Hanoi...)" onkeypress="if(event.key === 'Enter') searchCity()">
+            <button class="btn-search" onclick="searchCity()">TÌM KIẾM</button>
+            <button class="btn-search" style="background:#4ade80" onclick="loadMyStation()">TRẠM CỦA TÔI</button>
+        </div>
 
-<div class="container">
-    <div class="header">
-        <h1>ĐỒ ÁN TỐT NGHIỆP</h1>
-        <h2>HỆ THỐNG QUAN TRẮC MÔI TRƯỜNG LoRa</h2>
+        <div class="main-weather">
+            <div class="location-info">
+                <h2 id="cityName"><i class="fa-solid fa-location-dot"></i> Đang tải...</h2>
+                <div class="temp-big"><span id="tempMain">--</span>°</div>
+                <div id="weatherDesc" style="color: var(--text-sub); text-transform: uppercase; letter-spacing: 2px;">--</div>
+            </div>
+            <i id="weatherIcon" class="fa-solid fa-cloud-sun" style="font-size: 8rem; opacity: 0.8;"></i>
+        </div>
+
+        <div class="stats-grid">
+            <div class="card">
+                <span class="label"><i class="fa-solid fa-wind"></i> Chất lượng không khí</span>
+                <span class="value" id="aqiVal">--</span>
+                <div id="aqiStatus" class="aqi-badge">Đang đo</div>
+            </div>
+            <div class="card">
+                <span class="label"><i class="fa-solid fa-sun"></i> Chỉ số UV</span>
+                <span class="value" id="uvVal">--</span>
+                <span id="uvStatus" style="font-size: 0.8rem; color: var(--text-sub);">An toàn</span>
+            </div>
+            <div class="card">
+                <span class="label"><i class="fa-solid fa-droplet"></i> Độ ẩm</span>
+                <span class="value" id="humiVal">--%</span>
+            </div>
+            <div class="card">
+                <span class="label"><i class="fa-solid fa-gauge-high"></i> Tốc độ gió</span>
+                <span class="value" id="windVal">-- m/s</span>
+            </div>
+        </div>
+
+        <div class="footer">
+            <strong>SINH VIÊN: LÊ NGỌC HÀO</strong><br>
+            Trạm Thời Tiết Thông Minh LoRa | 2025 UTE Weather Station
+        </div>
     </div>
-
-    <div class="controls">
-        <select id="locationSelect" onchange="handleLocationChange()">
-            <option value="my_station">📍 TRẠM CỦA TÔI (DỮ LIỆU THỰC)</option>
-            <option value="Hanoi">HÀ NỘI (DỰ BÁO)</option>
-            <option value="Da Nang">ĐÀ NẴNG (DỰ BÁO)</option>
-            <option value="Ho Chi Minh">TP. HỒ CHÍ MINH (DỰ BÁO)</option>
-        </select>
-    </div>
-
-    <div class="dashboard">
-        <div class="card">
-            <i class="fa-solid fa-temperature-half"></i>
-            <span class="label">Nhiệt độ hiện tại</span>
-            <div class="value"><span id="temp">--</span><span class="unit">°C</span></div>
-        </div>
-
-        <div class="card">
-            <i class="fa-solid fa-droplets"></i>
-            <span class="label">Độ ẩm không khí</span>
-            <div class="value"><span id="humi">--</span><span class="unit">%</span></div>
-        </div>
-
-        <div class="card">
-            <i class="fa-solid fa-wind"></i>
-            <span class="label">Chất lượng không khí (AQI)</span>
-            <div class="value" id="aqi">--</div>
-            <div id="aqiStatus" class="status-badge">Đang cập nhật...</div>
-        </div>
-
-        <div class="card">
-            <i class="fa-solid fa-sun"></i>
-            <span class="label">Chỉ số tia UV</span>
-            <div class="value" id="uv">--</div>
-        </div>
-
-        <div class="card">
-            <i class="fa-solid fa-wind-warning"></i>
-            <span class="label">Tốc độ gió (Vệ tinh)</span>
-            <div class="value"><span id="wind">--</span><span class="unit"> m/s</span></div>
-        </div>
-
-        <div class="card">
-            <i class="fa-solid fa-cloud-bolt"></i>
-            <span class="label">Dự báo tình trạng</span>
-            <div id="rainStatus" class="forecast-text">ĐANG
+    <script src="index.js"></script>
+</body>
+</html>
