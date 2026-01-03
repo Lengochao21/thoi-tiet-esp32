@@ -38,6 +38,8 @@
             position: sticky;
             top: 0;
             z-index: 100;
+            flex-wrap: wrap;
+            gap: 20px;
         }
 
         .logo {
@@ -53,6 +55,26 @@
             -webkit-text-fill-color: transparent;
         }
 
+        .ute-logo {
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.5);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .ute-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+
         .logo-text h1 {
             font-size: 1.3rem;
             font-weight: 700;
@@ -65,10 +87,52 @@
             margin-top: 2px;
         }
 
+        /* Status Bar */
+        .status-bar {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: #10b981;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+
+        .status-dot.disconnected {
+            background: #ef4444;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
         .search-bar {
             display: flex;
             gap: 10px;
             align-items: center;
+            flex: 1;
+            min-width: 300px;
         }
 
         .location-select {
@@ -80,7 +144,7 @@
             font-size: 0.95rem;
             cursor: pointer;
             outline: none;
-            min-width: 250px;
+            min-width: 200px;
         }
 
         .location-select option {
@@ -96,7 +160,8 @@
             border-radius: 10px;
             font-size: 0.95rem;
             outline: none;
-            min-width: 200px;
+            flex: 1;
+            min-width: 150px;
         }
 
         .search-input::placeholder {
@@ -112,6 +177,7 @@
             cursor: pointer;
             font-weight: 600;
             transition: 0.3s;
+            white-space: nowrap;
         }
 
         .search-btn:hover {
@@ -318,6 +384,74 @@
             margin-top: 15px;
         }
 
+        /* Forecast Section */
+        .forecast-section {
+            margin-bottom: 30px;
+        }
+
+        .forecast-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .forecast-title i {
+            color: #3b82f6;
+        }
+
+        .forecast-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .forecast-card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(20px);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+            transition: 0.3s;
+        }
+
+        .forecast-card:hover {
+            transform: translateY(-3px);
+            border-color: #3b82f6;
+            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.2);
+        }
+
+        .forecast-day {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 10px;
+        }
+
+        .forecast-icon {
+            font-size: 2.5rem;
+            margin: 10px 0;
+        }
+
+        .forecast-temp {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .forecast-temp-range {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 8px;
+        }
+
+        .forecast-condition {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.7);
+        }
+
         /* Footer */
         .footer {
             text-align: center;
@@ -338,15 +472,21 @@
             color: rgba(255,255,255,0.5);
         }
 
-        @media (max-width: 968px) {
+        @media (max-width: 1024px) {
             .main-weather {
                 grid-template-columns: 1fr;
                 gap: 30px;
             }
-            
+        }
+
+        @media (max-width: 768px) {
             .top-bar {
                 flex-direction: column;
                 gap: 15px;
+            }
+
+            .logo {
+                width: 100%;
             }
 
             .search-bar {
@@ -357,6 +497,22 @@
             .location-select, .search-input {
                 width: 100%;
             }
+
+            .hero-weather {
+                padding: 30px;
+            }
+
+            .temp-display .big-temp {
+                font-size: 4rem;
+            }
+
+            .container {
+                padding: 20px;
+            }
+
+            .forecast-grid {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            }
         }
     </style>
 </head>
@@ -364,10 +520,40 @@
 
 <div class="top-bar">
     <div class="logo">
-        <i class="fas fa-cloud-sun"></i>
+        <div class="ute-logo">
+            <svg width="65" height="65" viewBox="0 0 65 65" xmlns="http://www.w3.org/2000/svg">
+                <!-- Vòng tròn ngoài xanh -->
+                <circle cx="32.5" cy="32.5" r="31" fill="none" stroke="#3b82f6" stroke-width="2"/>
+                <circle cx="32.5" cy="32.5" r="30" fill="#1e3a8a"/>
+                
+                <!-- Atom symbol (nguyên tử) -->
+                <circle cx="32.5" cy="32.5" r="4" fill="#3b82f6"/>
+                
+                <!-- Electron orbits -->
+                <ellipse cx="32.5" cy="32.5" rx="12" ry="8" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0.7"/>
+                <ellipse cx="32.5" cy="32.5" rx="12" ry="8" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0.7" transform="rotate(60 32.5 32.5)"/>
+                <ellipse cx="32.5" cy="32.5" rx="12" ry="8" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0.7" transform="rotate(120 32.5 32.5)"/>
+                
+                <!-- Electrons -->
+                <circle cx="44.5" cy="32.5" r="1.5" fill="#3b82f6"/>
+                <circle cx="24" cy="38" r="1.5" fill="#3b82f6"/>
+                <circle cx="24" cy="27" r="1.5" fill="#3b82f6"/>
+            </svg>
+        </div>
         <div class="logo-text">
             <h1>ĐỒ ÁN TỐT NGHIỆP</h1>
             <p>Chuyên ngành Điện - Điện tử</p>
+        </div>
+    </div>
+    
+    <div class="status-bar">
+        <div class="status-item">
+            <div class="status-dot disconnected" id="espStatus"></div>
+            <span id="espStatusText">ESP: Chưa kết nối</span>
+        </div>
+        <div class="status-item">
+            <i class="fas fa-cloud"></i>
+            <span id="weatherSource">API: Sẵn sàng</span>
         </div>
     </div>
     
@@ -455,6 +641,19 @@
         </div>
     </div>
 
+    <!-- Forecast Section -->
+    <div class="forecast-section">
+        <div class="forecast-title">
+            <i class="fas fa-calendar-days"></i>
+            Dự Báo 5 Ngày
+        </div>
+        <div class="forecast-grid" id="forecastGrid">
+            <div class="forecast-card">
+                <div class="forecast-day">Đang tải...</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Detail Cards -->
     <div class="detail-grid">
         <div class="detail-card">
@@ -512,6 +711,8 @@
             <div class="card-description">Thời gian hoàng hôn</div>
         </div>
     </div>
+
+
 </div>
 
 <div class="footer">
@@ -522,6 +723,8 @@
 
 <script>
     const API_KEY = "a216f02f9004f6fedecea80b73fc8632";
+    let currentCity = "Da Nang";
+    let forecastData = null;
     
     let multiSourceData = {
         myStation: null,
@@ -529,6 +732,25 @@
         hanoi: null,
         hcm: null
     };
+
+    // Kiểm tra kết nối ESP
+    async function checkESPConnection() {
+        try {
+            const res = await fetch('/get-sensor', { timeout: 2000 });
+            if (res.ok) {
+                document.getElementById('espStatus').classList.add('connected');
+                document.getElementById('espStatus').classList.remove('disconnected');
+                document.getElementById('espStatusText').innerText = '✓ ESP: Kết nối';
+                return true;
+            }
+        } catch (e) {
+            console.log('ESP không kết nối:', e);
+        }
+        document.getElementById('espStatus').classList.remove('connected');
+        document.getElementById('espStatus').classList.add('disconnected');
+        document.getElementById('espStatusText').innerText = '✗ ESP: Chưa kết nối';
+        return false;
+    }
 
     function searchCustom() {
         const input = document.getElementById('customSearch').value.trim();
@@ -548,7 +770,9 @@
             await fetchMyStationWithAI();
         } else {
             document.getElementById('aiIndicator').style.display = 'none';
+            currentCity = location;
             await fetchCityWeather(location);
+            await fetchForecast(location);
         }
     }
 
@@ -576,6 +800,50 @@
         }
     }
 
+    async function fetchForecast(city) {
+        const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&units=metric&appid=${API_KEY}&lang=vi`;
+        try {
+            const res = await fetch(url);
+            const data = await res.json();
+            forecastData = data;
+            displayForecast(data);
+        } catch (e) {
+            console.log('Lỗi tải dự báo:', e);
+        }
+    }
+
+    function displayForecast(data) {
+        const forecastGrid = document.getElementById('forecastGrid');
+        forecastGrid.innerHTML = '';
+
+        const dailyData = {};
+        data.list.forEach(item => {
+            const date = new Date(item.dt * 1000).toLocaleDateString('vi-VN');
+            if (!dailyData[date]) {
+                dailyData[date] = item;
+            }
+        });
+
+        const dates = Object.keys(dailyData).slice(0, 5);
+        dates.forEach((date, idx) => {
+            const item = dailyData[date];
+            const dayName = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'][new Date(item.dt * 1000).getDay()];
+            
+            const card = document.createElement('div');
+            card.className = 'forecast-card';
+            card.innerHTML = `
+                <div class="forecast-day">${dayName}, ${date}</div>
+                <div class="forecast-icon">${getWeatherIcon(item.weather[0].main)}</div>
+                <div class="forecast-temp">${Math.round(item.main.temp)}°C</div>
+                <div class="forecast-temp-range">
+                    ${Math.round(item.main.temp_min)}° ~ ${Math.round(item.main.temp_max)}°
+                </div>
+                <div class="forecast-condition">${item.weather[0].description}</div>
+            `;
+            forecastGrid.appendChild(card);
+        });
+    }
+
     async function fetchMyStationWithAI() {
         await fetchMultiSourceData();
         
@@ -583,6 +851,7 @@
         
         if (!myData || myData.temp === "--") {
             await fetchCityWeather('Da Nang');
+            await fetchForecast('Da Nang');
             return;
         }
         
@@ -604,6 +873,7 @@
             document.getElementById('uvIndex').innerText = calculateUV(data);
             updateUVDesc(calculateUV(data));
             document.getElementById('weatherIcon').innerText = getWeatherIcon(data.weather[0].main);
+            await fetchForecast('Da Nang');
         }
         
         const forecast = predictWeatherWithAI(myData, multiSourceData);
@@ -730,10 +1000,8 @@
     }
 
     // Initialize
+    checkESPConnection();
     handleLocationChange();
+    setInterval(checkESPConnection, 15000);
     setInterval(handleLocationChange, 30000);
-    setInterval(fetchMultiSourceData, 300000);
-</script>
-
-</body>
-</html> 
+    setInterval(fetchMultiSourceData, 300000);  
