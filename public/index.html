@@ -1,4 +1,12 @@
-<!DOCTYPE html>
+// Load forecast
+        const forecastData = await fetchForecast(city);
+        if (forecastData && forecastData.list) {
+            displayForecastChart(forecastData);
+            displayForecast(forecastData);
+        }    const API_KEY = "a216f02f9004f6fedecea80b73fc8632";
+    let currentStation = 'station1';
+    let espConnected = false;
+    let forecastChart = null;<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -6,6 +14,8 @@
     <title>Dự Báo Thời Tiết - UTE Weather Station</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+
     
     <style>
         :root {
@@ -82,6 +92,13 @@
             border: 1px solid rgba(59, 130, 246, 0.3);
             border-radius: 8px;
             font-size: 0.85rem;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .status-item:hover {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.2);
         }
 
         .status-dot {
@@ -161,6 +178,17 @@
             padding: 30px;
         }
 
+        .station-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
         .hero-weather {
             background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(16, 185, 129, 0.2));
             border-radius: 30px;
@@ -170,6 +198,13 @@
             border: 1px solid rgba(59, 130, 246, 0.3);
             position: relative;
             overflow: hidden;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .hero-weather:hover {
+            border-color: #10b981;
+            box-shadow: 0 10px 40px rgba(59, 130, 246, 0.15);
         }
 
         .hero-weather::before {
@@ -363,6 +398,148 @@
             gap: 10px;
         }
 
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            border-top: 1px solid rgba(59, 130, 246, 0.2);
+            margin-top: 50px;
+        }
+
+        .footer .student {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #3b82f6;
+            margin-bottom: 10px;
+        }
+
+        .footer .info {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.5);
+        }
+
+        /* Modal ESP */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background-color: #1e293b;
+            margin: 10% auto;
+            padding: 30px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 20px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .esp-status-box {
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            border: 2px solid;
+        }
+
+        .esp-status-box.connected {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: #10b981;
+        }
+
+        .esp-status-box.disconnected {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: #ef4444;
+        }
+
+        .esp-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .esp-status-text {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .esp-status-box.connected .esp-status-text {
+            color: #10b981;
+        }
+
+        .esp-status-box.disconnected .esp-status-text {
+            color: #ef4444;
+        }
+
+        .esp-status-box.connected .esp-desc {
+            color: #86efac;
+        }
+
+        .esp-status-box.disconnected .esp-desc {
+            color: #fca5a5;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-close, .btn-refresh {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .btn-refresh {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+
+        .btn-refresh:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-close {
+            background: rgba(59, 130, 246, 0.1);
+            color: white;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-close:hover {
+            background: rgba(59, 130, 246, 0.2);
+        }
+
         .forecast-title i {
             color: #3b82f6;
         }
@@ -371,6 +548,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 15px;
+            margin-bottom: 30px;
         }
 
         .forecast-card {
@@ -417,24 +595,18 @@
             color: rgba(255,255,255,0.7);
         }
 
-        .footer {
-            text-align: center;
-            padding: 40px 20px;
-            border-top: 1px solid rgba(59, 130, 246, 0.2);
-            margin-top: 50px;
+        .chart-container {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(20px);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 30px;
+            position: relative;
+            height: 350px;
         }
 
-        .footer .student {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #3b82f6;
-            margin-bottom: 10px;
-        }
 
-        .footer .info {
-            font-size: 0.9rem;
-            color: rgba(255,255,255,0.5);
-        }
 
         @media (max-width: 1024px) {
             .main-weather {
@@ -484,7 +656,7 @@
     </div>
     
     <div class="status-bar">
-        <div class="status-item">
+        <div class="status-item" id="espStatusItem" style="cursor: pointer;">
             <div class="status-dot disconnected" id="espStatus"></div>
             <span id="espStatusText">ESP: Chưa kết nối</span>
         </div>
@@ -496,6 +668,7 @@
     
     <div class="search-bar">
         <select class="location-select" id="locationSelect">
+            <option value="station1">🔴 TRẠM 1 - KHU VỰC CHÍNH</option>
             <option value="Da Nang">📍 Đà Nẵng</option>
             <option value="Hanoi">Hà Nội</option>
             <option value="Ho Chi Minh">TP. Hồ Chí Minh</option>
@@ -519,8 +692,10 @@
 </div>
 
 <div class="container">
-    <div class="hero-weather">
+    <div class="hero-weather" id="stationContainer">
         <div class="hero-content">
+            <div id="stationBadge" class="station-badge">🔴 TRẠM 1 - TRẠM CHÍNH</div>
+            
             <div class="location-title">
                 <i class="fas fa-map-marker-alt"></i>
                 <h2 id="locationName">Đang tải...</h2>
@@ -560,12 +735,29 @@
 
     <div class="forecast-section">
         <div class="forecast-title">
-            <i class="fas fa-calendar-days"></i> Dự Báo 4 Ngày
+            <i class="fas fa-calendar-days"></i> Dự Báo 4-5 Ngày
         </div>
         <div class="forecast-grid" id="forecastGrid">
             <div class="forecast-card"><div class="forecast-day">Đang tải...</div></div>
         </div>
+
+        <div class="toggle-chart" id="toggleChart">
+            <i class="fas fa-chevron-down"></i>
+            <span>Xem Biểu Đồ Chi Tiết</span>
+        </div>
+
+        <div class="chart-wrapper" id="chartWrapper">
+            <div style="margin-top: 20px;">
+                <div style="background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(20px); padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); position: relative; height: 350px;">
+                    <canvas id="forecastChart"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
+
+
+
+
 
     <div class="detail-grid">
         <div class="detail-card">
@@ -607,6 +799,26 @@
     </div>
 </div>
 
+<!-- Modal ESP -->
+<div id="espModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">Trạng Thái ESP - Trạm 1</div>
+        
+        <div class="esp-status-box disconnected" id="espStatusBox">
+            <div class="esp-icon" id="espIcon">📡</div>
+            <div class="esp-status-text" id="espStatusTitle">Đang kiểm tra...</div>
+            <div class="esp-desc" id="espStatusDesc">Vui lòng chờ</div>
+        </div>
+
+        <div class="modal-buttons">
+            <button class="btn-refresh" id="refreshEspBtn">
+                <i class="fas fa-sync"></i> Kiểm Tra Lại
+            </button>
+            <button class="btn-close" id="closeEspBtn">Đóng</button>
+        </div>
+    </div>
+</div>
+
 <div class="footer">
     <div class="student">SINH VIÊN: LÊ NGỌC HẢO GVHD: ThS ĐỖ VIẾT ƠN</div>
     <div class="info">THIẾT KẾ HỆ THỐNG GIÁM SÁT VÀ CHẤT LƯỢNG KHÔNG KHÍ</div>
@@ -614,13 +826,16 @@
 </div>
 
 <script>
-    const API_KEY = "a216f02f9004f6fedecea80b73fc8632";
+
+
+
     
     // ===== FUNCTIONS (định nghĩa trước) =====
     async function checkESPConnection() {
         try {
             const res = await fetch('/get-sensor', { timeout: 2000 });
             if (res.ok) {
+                espConnected = true;
                 document.getElementById('espStatus').classList.add('connected');
                 document.getElementById('espStatus').classList.remove('disconnected');
                 document.getElementById('espStatusText').innerText = '✓ ESP: Kết nối';
@@ -628,11 +843,38 @@
             }
         } catch (e) {
             console.log('ESP không kết nối:', e);
+            espConnected = false;
         }
         document.getElementById('espStatus').classList.remove('connected');
         document.getElementById('espStatus').classList.add('disconnected');
         document.getElementById('espStatusText').innerText = '✗ ESP: Chưa kết nối';
         return false;
+    }
+
+    function showESPModal() {
+        const modal = document.getElementById('espModal');
+        const statusBox = document.getElementById('espStatusBox');
+        const icon = document.getElementById('espIcon');
+        const title = document.getElementById('espStatusTitle');
+        const desc = document.getElementById('espStatusDesc');
+
+        modal.style.display = 'block';
+
+        if (espConnected) {
+            statusBox.className = 'esp-status-box connected';
+            icon.innerText = '✅';
+            title.innerText = 'Kết Nối Thành Công';
+            desc.innerText = 'ESP8266 đang hoạt động bình thường';
+        } else {
+            statusBox.className = 'esp-status-box disconnected';
+            icon.innerText = '❌';
+            title.innerText = 'Mất Kết Nối';
+            desc.innerText = 'ESP8266 không phản hồi. Vui lòng kiểm tra kết nối.';
+        }
+    }
+
+    function closeESPModal() {
+        document.getElementById('espModal').style.display = 'none';
     }
 
     async function fetchOpenWeatherData(city) {
@@ -711,7 +953,17 @@
             return;
         }
 
-        document.getElementById('locationName').innerText = data.name;
+        currentStation = city;
+
+        // Hiện badge TRẠM 1 chỉ khi là station1
+        const badge = document.getElementById('stationBadge');
+        if (city === 'station1') {
+            badge.style.display = 'block';
+            document.getElementById('locationName').innerText = 'TRẠM 1 - KHU VỰC CHÍNH (ESP)';
+        } else {
+            badge.style.display = 'none';
+            document.getElementById('locationName').innerText = data.name;
+        }
         document.getElementById('mainTemp').innerText = Math.round(data.main.temp);
         document.getElementById('feelsLike').innerText = Math.round(data.main.feels_like);
         document.getElementById('humidity').innerText = data.main.humidity;
@@ -732,11 +984,9 @@
         document.getElementById('uvIndex').innerText = uv;
         updateUVDesc(uv);
 
-        // Load forecast
-        const forecastData = await fetchForecast(city);
-        if (forecastData && forecastData.list) {
-            displayForecast(forecastData);
-        }
+
+
+
     }
 
     function displayForecast(data) {
@@ -767,6 +1017,105 @@
         });
     }
 
+    function displayForecastChart(data) {
+        const daily = {};
+        const dates = [];
+        const tempMax = [];
+        const tempMin = [];
+        const rain = [];
+
+        data.list.forEach(item => {
+            const date = new Date(item.dt * 1000).toLocaleDateString('vi-VN', { month: '2-digit', day: '2-digit' });
+            if (!daily[date]) {
+                daily[date] = item;
+                dates.push(date);
+                tempMax.push(item.main.temp_max);
+                tempMin.push(item.main.temp_min);
+                rain.push(item.rain ? item.rain['3h'] || 0 : 0);
+            }
+        });
+
+        const ctx = document.getElementById('forecastChart').getContext('2d');
+        if (forecastChart) forecastChart.destroy();
+
+        forecastChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates.slice(0, 5),
+                datasets: [
+                    {
+                        label: 'Nhiệt độ cao nhất (°C)',
+                        data: tempMax.slice(0, 5),
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#ef4444'
+                    },
+                    {
+                        label: 'Nhiệt độ thấp nhất (°C)',
+                        data: tempMin.slice(0, 5),
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#3b82f6'
+                    },
+                    {
+                        label: 'Lượng mưa (mm)',
+                        data: rain.slice(0, 5),
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#10b981',
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        labels: { color: '#f8fafc', font: { size: 12 } }
+                    }
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: '#f8fafc' },
+                        title: { display: true, text: 'Nhiệt độ (°C)', color: '#f8fafc' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        grid: { drawOnChartArea: false },
+                        ticks: { color: '#f8fafc' },
+                        title: { display: true, text: 'Mưa (mm)', color: '#f8fafc' }
+                    },
+                    x: {
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: '#f8fafc' }
+                    }
+                }
+            }
+        });
+    }
+
+
+
     // ===== EVENT LISTENERS =====
     document.getElementById('locationSelect').addEventListener('change', (e) => {
         displayWeather(e.target.value);
@@ -784,11 +1133,41 @@
         }
     });
 
+    // Bấm vào ESP Status hoặc TRẠM 1 để xem chi tiết
+    document.getElementById('espStatusItem').addEventListener('click', () => {
+        if (currentStation === 'station1') {
+            showESPModal();
+        }
+    });
+
+    document.getElementById('stationContainer').addEventListener('click', () => {
+        if (currentStation === 'station1') {
+            showESPModal();
+        }
+    });
+
+    document.getElementById('closeEspBtn').addEventListener('click', closeESPModal);
+    document.getElementById('refreshEspBtn').addEventListener('click', () => {
+        checkESPConnection();
+        showESPModal();
+    });
+
+    // Toggle biểu đồ
+    document.getElementById('toggleChart').addEventListener('click', function() {
+        const wrapper = document.getElementById('chartWrapper');
+        this.classList.toggle('active');
+        wrapper.classList.toggle('active');
+    });
+
+    // Đóng modal khi click ngoài
+    window.addEventListener('click', (event) => {
+        const modal = document.getElementById('espModal');
+        if (event.target === modal) {
+            closeESPModal();
+        }
+    });
+
     // ===== INIT =====
     checkESPConnection();
-    displayWeather('Da Nang');
-    setInterval(checkESPConnection, 15000);
-</script>
-
-</body>
-</html>
+    displayWeather('station1');
+    setInterval(checkESPConnection, 15000); 
