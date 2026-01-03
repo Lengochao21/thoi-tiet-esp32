@@ -51,8 +51,9 @@
         .logo i {
             font-size: 2rem;
             background: linear-gradient(135deg, #3b82f6, #10b981);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            --webkit-background-clip: text; /* Dòng cũ của bạn */
+            background-clip: text;         /* Thêm dòng này để hết cảnh báo */
+            color: transparent;            /* Thêm dòng này để thấy được hiệu ứng gradient */
         }
 
         .ute-logo {
