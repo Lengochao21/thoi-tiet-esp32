@@ -51,29 +51,8 @@
         .logo i {
             font-size: 2rem;
             background: linear-gradient(135deg, #3b82f6, #10b981);
-            --webkit-background-clip: text; /* Dòng cũ của bạn */
-            background-clip: text;         /* Thêm dòng này để hết cảnh báo */
-            color: transparent;            /* Thêm dòng này để thấy được hiệu ứng gradient */
-        }
-
-        .ute-logo {
-            width: 65px;
-            height: 65px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #1e3a8a, #3b82f6);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.5);
-            overflow: hidden;
-            flex-shrink: 0;
-        }
-
-        .ute-logo img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 50%;
+            background-clip: text;
+            color: transparent;
         }
 
         .logo-text h1 {
@@ -88,7 +67,6 @@
             margin-top: 2px;
         }
 
-        /* Status Bar */
         .status-bar {
             display: flex;
             gap: 15px;
@@ -136,16 +114,14 @@
             min-width: 300px;
         }
 
-        .location-select {
+        .location-select, .search-input {
             background: rgba(59, 130, 246, 0.1);
             border: 1px solid rgba(59, 130, 246, 0.3);
             color: white;
             padding: 12px 20px;
             border-radius: 10px;
             font-size: 0.95rem;
-            cursor: pointer;
             outline: none;
-            min-width: 200px;
         }
 
         .location-select option {
@@ -154,13 +130,6 @@
         }
 
         .search-input {
-            background: rgba(59, 130, 246, 0.1);
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 10px;
-            font-size: 0.95rem;
-            outline: none;
             flex: 1;
             min-width: 150px;
         }
@@ -192,7 +161,6 @@
             padding: 30px;
         }
 
-        /* Hero Weather Section */
         .hero-weather {
             background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(16, 185, 129, 0.2));
             border-radius: 30px;
@@ -258,9 +226,8 @@
             font-weight: 800;
             line-height: 1;
             background: linear-gradient(135deg, #fff, #3b82f6);
-            -webkit-background-clip: text;
             background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: transparent;
         }
 
         .temp-display .weather-icon {
@@ -305,7 +272,6 @@
             margin-right: 10px;
         }
 
-        /* Detail Cards Grid */
         .detail-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -358,7 +324,6 @@
             color: rgba(255,255,255,0.6);
         }
 
-        /* AQI Badge */
         .aqi-badge {
             display: inline-block;
             padding: 8px 20px;
@@ -372,7 +337,6 @@
         .aqi-moderate { background: linear-gradient(135deg, #f59e0b, #d97706); }
         .aqi-bad { background: linear-gradient(135deg, #ef4444, #dc2626); }
 
-        /* AI Badge */
         .ai-badge {
             display: inline-flex;
             align-items: center;
@@ -386,7 +350,6 @@
             margin-top: 15px;
         }
 
-        /* Forecast Section */
         .forecast-section {
             margin-bottom: 30px;
         }
@@ -454,7 +417,6 @@
             color: rgba(255,255,255,0.7);
         }
 
-        /* Footer */
         .footer {
             text-align: center;
             padding: 40px 20px;
@@ -487,10 +449,6 @@
                 gap: 15px;
             }
 
-            .logo {
-                width: 100%;
-            }
-
             .search-bar {
                 flex-direction: column;
                 width: 100%;
@@ -510,10 +468,6 @@
 
             .container {
                 padding: 20px;
-            }
-
-            .forecast-grid {
-                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             }
         }
     </style>
@@ -541,29 +495,14 @@
     </div>
     
     <div class="search-bar">
-        <select class="location-select" id="locationSelect" onchange="handleLocationChange()">
-            <option value="my_station">📍 Trạm Của Tôi (AI Dự Báo)</option>
-            <optgroup label="🇻🇳 VIỆT NAM">
-                <option value="Hanoi">Hà Nội</option>
-                <option value="Da Nang">Đà Nẵng</option>
-                <option value="Ho Chi Minh">TP. Hồ Chí Minh</option>
-                <option value="Hai Phong">Hải Phòng</option>
-                <option value="Can Tho">Cần Thơ</option>
-                <option value="Nha Trang">Nha Trang</option>
-                <option value="Da Lat">Đà Lạt</option>
-            </optgroup>
-            <optgroup label="🌏 CHÂU Á">
-                <option value="Tokyo">Tokyo</option>
-                <option value="Seoul">Seoul</option>
-                <option value="Singapore">Singapore</option>
-                <option value="Bangkok">Bangkok</option>
-            </optgroup>
-            <optgroup label="🌍 QUỐC TẾ">
-                <option value="London">London</option>
-                <option value="Paris">Paris</option>
-                <option value="New York">New York</option>
-                <option value="Sydney">Sydney</option>
-            </optgroup>
+        <select class="location-select" id="locationSelect">
+            <option value="Da Nang">📍 Đà Nẵng</option>
+            <option value="Hanoi">Hà Nội</option>
+            <option value="Ho Chi Minh">TP. Hồ Chí Minh</option>
+            <option value="Hai Phong">Hải Phòng</option>
+            <option value="Can Tho">Cần Thơ</option>
+            <option value="Nha Trang">Nha Trang</option>
+            <option value="Da Lat">Đà Lạt</option>
         </select>
         
         <input 
@@ -571,17 +510,15 @@
             class="search-input" 
             id="customSearch" 
             placeholder="Hoặc gõ tên thành phố..."
-            onkeypress="if(event.key==='Enter') searchCustom()"
         >
         
-        <button class="search-btn" onclick="searchCustom()">
+        <button class="search-btn" id="searchBtn">
             <i class="fas fa-search"></i>
         </button>
     </div>
 </div>
 
 <div class="container">
-    <!-- Hero Weather Section -->
     <div class="hero-weather">
         <div class="hero-content">
             <div class="location-title">
@@ -592,13 +529,10 @@
             <div class="main-weather">
                 <div class="temp-display">
                     <div class="weather-icon" id="weatherIcon">🌤️</div>
-                    <div class="big-temp">
-                        <span id="mainTemp">--</span>°
-                    </div>
+                    <div class="big-temp"><span id="mainTemp">--</span>°</div>
                     <div class="condition" id="mainCondition">Đang tải...</div>
                     <div id="aiIndicator" style="display: none;" class="ai-badge">
-                        <i class="fas fa-brain"></i>
-                        AI Dự Đoán Thông Minh
+                        <i class="fas fa-brain"></i> AI Dự Đoán
                     </div>
                 </div>
                 
@@ -624,99 +558,65 @@
         </div>
     </div>
 
-    <!-- Forecast Section -->
     <div class="forecast-section">
         <div class="forecast-title">
-            <i class="fas fa-calendar-days"></i>
-            Dự Báo 4 Ngày
+            <i class="fas fa-calendar-days"></i> Dự Báo 4 Ngày
         </div>
         <div class="forecast-grid" id="forecastGrid">
-            <div class="forecast-card">
-                <div class="forecast-day">Đang tải...</div>
-            </div>
+            <div class="forecast-card"><div class="forecast-day">Đang tải...</div></div>
         </div>
     </div>
 
-    <!-- Detail Cards -->
     <div class="detail-grid">
         <div class="detail-card">
-            <div class="card-header">
-                <i class="fas fa-wind"></i>
-                <h3>Chất Lượng Không Khí</h3>
-            </div>
+            <div class="card-header"><i class="fas fa-wind"></i><h3>Chất Lượng Không Khí</h3></div>
             <div class="card-value" id="aqiValue">--</div>
             <div class="card-description">AQI Index</div>
             <div id="aqiBadge" class="aqi-badge aqi-good">Đang tải...</div>
         </div>
 
         <div class="detail-card">
-            <div class="card-header">
-                <i class="fas fa-sun"></i>
-                <h3>Chỉ Số UV</h3>
-            </div>
+            <div class="card-header"><i class="fas fa-sun"></i><h3>Chỉ Số UV</h3></div>
             <div class="card-value" id="uvIndex">--</div>
             <div class="card-description" id="uvDesc">Đang tải...</div>
         </div>
 
         <div class="detail-card">
-            <div class="card-header">
-                <i class="fas fa-eye"></i>
-                <h3>Tầm Nhìn Xa</h3>
-            </div>
+            <div class="card-header"><i class="fas fa-eye"></i><h3>Tầm Nhìn Xa</h3></div>
             <div class="card-value"><span id="visibility">--</span> km</div>
             <div class="card-description">Độ rõ không khí</div>
         </div>
 
         <div class="detail-card">
-            <div class="card-header">
-                <i class="fas fa-cloud"></i>
-                <h3>Độ Phủ Mây</h3>
-            </div>
+            <div class="card-header"><i class="fas fa-cloud"></i><h3>Độ Phủ Mây</h3></div>
             <div class="card-value"><span id="clouds">--</span>%</div>
             <div class="card-description">Tỷ lệ mây che phủ</div>
         </div>
 
         <div class="detail-card">
-            <div class="card-header">
-                <i class="fas fa-sunrise"></i>
-                <h3>Mặt Trời Mọc</h3>
-            </div>
+            <div class="card-header"><i class="fas fa-sunrise"></i><h3>Mặt Trời Mọc</h3></div>
             <div class="card-value" style="font-size: 1.8rem;" id="sunrise">--:--</div>
             <div class="card-description">Thời gian bình minh</div>
         </div>
 
         <div class="detail-card">
-            <div class="card-header">
-                <i class="fas fa-sunset"></i>
-                <h3>Mặt Trời Lặn</h3>
-            </div>
+            <div class="card-header"><i class="fas fa-sunset"></i><h3>Mặt Trời Lặn</h3></div>
             <div class="card-value" style="font-size: 1.8rem;" id="sunset">--:--</div>
             <div class="card-description">Thời gian hoàng hôn</div>
         </div>
     </div>
-
-
 </div>
 
 <div class="footer">
     <div class="student">SINH VIÊN: LÊ NGỌC HẢO GVHD: ThS ĐỖ VIẾT ƠN</div>
-    <div class="info"> THIẾT KẾ HỆ THỐNG GIÁM SÁT VÀ CHẤT LƯỢNG KHÔNG KHÍ | Sử dụng thuật toán AI đa luồng</div>
+    <div class="info">THIẾT KẾ HỆ THỐNG GIÁM SÁT VÀ CHẤT LƯỢNG KHÔNG KHÍ</div>
     <div class="info" style="margin-top: 5px;">© 2025 UTE Weather Station</div>
 </div>
 
 <script>
     const API_KEY = "a216f02f9004f6fedecea80b73fc8632";
-    let currentCity = "Da Nang";
-    let forecastData = null;
     
-    let multiSourceData = {
-        myStation: null,
-        danang: null,
-        hanoi: null,
-        hcm: null
-    };
-
-    // Kiểm tra kết nối ESP
+    // ===== FUNCTIONS (định nghĩa trước) =====
     async function checkESPConnection() {
         try {
             const res = await fetch('/get-sensor', { timeout: 2000 });
@@ -735,50 +635,15 @@
         return false;
     }
 
-    function searchCustom() {
-        const input = document.getElementById('customSearch').value.trim();
-        if (input) {
-            loadWeatherData(input);
-        }
-    }
-
-    async function handleLocationChange() {
-        const mode = document.getElementById('locationSelect').value;
-        await loadWeatherData(mode);
-    }
-
-    async function loadWeatherData(location) {
-        if (location === 'my_station') {
-            document.getElementById('aiIndicator').style.display = 'inline-flex';
-            await fetchMyStationWithAI();
-        } else {
-            document.getElementById('aiIndicator').style.display = 'none';
-            currentCity = location;
-            await fetchCityWeather(location);
-            await fetchForecast(location);
-        }
-    }
-
-    async function fetchMultiSourceData() {
-        const promises = [
-            fetch('/get-sensor').then(r => r.json()).catch(() => null),
-            fetchOpenWeatherData('Da Nang'),
-            fetchOpenWeatherData('Hanoi'),
-            fetchOpenWeatherData('Ho Chi Minh')
-        ];
-        
-        const [station, danang, hanoi, hcm] = await Promise.all(promises);
-        
-        multiSourceData = { myStation: station, danang, hanoi, hcm };
-        return multiSourceData;
-    }
-
     async function fetchOpenWeatherData(city) {
         const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${API_KEY}&lang=vi`;
         try {
             const res = await fetch(url);
-            return await res.json();
+            const data = await res.json();
+            console.log(`Weather data for ${city}:`, data);
+            return data;
         } catch (e) {
+            console.error('Lỗi fetch:', e);
             return null;
         }
     }
@@ -787,178 +652,34 @@
         const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&units=metric&appid=${API_KEY}&lang=vi`;
         try {
             const res = await fetch(url);
-            const data = await res.json();
-            forecastData = data;
-            displayForecast(data);
+            return await res.json();
         } catch (e) {
-            console.log('Lỗi tải dự báo:', e);
+            console.error('Lỗi forecast:', e);
+            return null;
         }
-    }
-
-    function displayForecast(data) {
-        const forecastGrid = document.getElementById('forecastGrid');
-        forecastGrid.innerHTML = '';
-
-        const dailyData = {};
-        data.list.forEach(item => {
-            const date = new Date(item.dt * 1000).toLocaleDateString('vi-VN');
-            if (!dailyData[date]) {
-                dailyData[date] = item;
-            }
-        });
-
-        const dates = Object.keys(dailyData).slice(0, 4);
-        dates.forEach((date, idx) => {
-            const item = dailyData[date];
-            const dayName = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'][new Date(item.dt * 1000).getDay()];
-            
-            const card = document.createElement('div');
-            card.className = 'forecast-card';
-            card.innerHTML = `
-                <div class="forecast-day">${dayName}, ${date}</div>
-                <div class="forecast-icon">${getWeatherIcon(item.weather[0].main)}</div>
-                <div class="forecast-temp">${Math.round(item.main.temp)}°C</div>
-                <div class="forecast-temp-range">
-                    ${Math.round(item.main.temp_min)}° ~ ${Math.round(item.main.temp_max)}°
-                </div>
-                <div class="forecast-condition">${item.weather[0].description}</div>
-            `;
-            forecastGrid.appendChild(card);
-        });
-    }
-
-    async function fetchMyStationWithAI() {
-        await fetchMultiSourceData();
-        
-        const myData = multiSourceData.myStation;
-        
-        if (!myData || myData.temp === "--") {
-            await fetchCityWeather('Da Nang');
-            await fetchForecast('Da Nang');
-            return;
-        }
-        
-        document.getElementById('locationName').innerText = 'Trạm Của Tôi';
-        document.getElementById('mainTemp').innerText = myData.temp;
-        document.getElementById('feelsLike').innerText = myData.temp;
-        document.getElementById('humidity').innerText = myData.humi;
-        document.getElementById('aqiValue').innerText = myData.ppm;
-        updateAQIStyle(myData.ppm);
-    
-        if (multiSourceData.danang) {
-            const data = multiSourceData.danang;
-            document.getElementById('windSpeed').innerText = data.wind.speed.toFixed(1);
-            document.getElementById('pressure').innerText = data.main.pressure;
-            document.getElementById('visibility').innerText = (data.visibility / 1000).toFixed(1);
-            document.getElementById('clouds').innerText = data.clouds.all;
-            document.getElementById('sunrise').innerText = formatTime(data.sys.sunrise);
-            document.getElementById('sunset').innerText = formatTime(data.sys.sunset);
-            document.getElementById('uvIndex').innerText = calculateUV(data);
-            updateUVDesc(calculateUV(data));
-            document.getElementById('weatherIcon').innerText = getWeatherIcon(data.weather[0].main);
-            await fetchForecast('Da Nang');
-        }
-        
-        const forecast = predictWeatherWithAI(myData, multiSourceData);
-        document.getElementById('mainCondition').innerText = forecast;
-    }
-
-    async function fetchCityWeather(city) {
-        const data = await fetchOpenWeatherData(city);
-        
-        if (!data || data.cod === "404") {
-            document.getElementById('locationName').innerText = 'Không tìm thấy';
-            document.getElementById('mainCondition').innerText = 'Vui lòng thử lại';
-            return;
-        }
-        
-        document.getElementById('locationName').innerText = data.name;
-        document.getElementById('mainTemp').innerText = Math.round(data.main.temp);
-        document.getElementById('feelsLike').innerText = Math.round(data.main.feels_like);
-        document.getElementById('humidity').innerText = data.main.humidity;
-        document.getElementById('windSpeed').innerText = data.wind.speed.toFixed(1);
-        document.getElementById('pressure').innerText = data.main.pressure;
-        document.getElementById('visibility').innerText = (data.visibility / 1000).toFixed(1);
-        document.getElementById('clouds').innerText = data.clouds.all;
-        document.getElementById('sunrise').innerText = formatTime(data.sys.sunrise);
-        document.getElementById('sunset').innerText = formatTime(data.sys.sunset);
-        document.getElementById('mainCondition').innerText = data.weather[0].description.toUpperCase();
-        document.getElementById('weatherIcon').innerText = getWeatherIcon(data.weather[0].main);
-        
-        const estimatedAqi = Math.floor(data.clouds.all * 1.5);
-        document.getElementById('aqiValue').innerText = estimatedAqi;
-        updateAQIStyle(estimatedAqi);
-        
-        const uv = calculateUV(data);
-        document.getElementById('uvIndex').innerText = uv;
-        updateUVDesc(uv);
-    }
-
-    function predictWeatherWithAI(myStation, sources) {
-        const myTemp = parseFloat(myStation.temp);
-        const myHumi = parseFloat(myStation.humi);
-        const myAqi = parseFloat(myStation.ppm);
-        
-        let avgTemp = 0, avgHumi = 0, count = 0;
-        ['danang', 'hanoi', 'hcm'].forEach(city => {
-            if (sources[city]) {
-                avgTemp += sources[city].main.temp;
-                avgHumi += sources[city].main.humidity;
-                count++;
-            }
-        });
-        avgTemp /= count;
-        avgHumi /= count;
-        
-        const tempDiff = myTemp - avgTemp;
-        const humiDiff = myHumi - avgHumi;
-        
-        if (myHumi > 85 && humiDiff > 10) return "SẮP MƯA TO";
-        if (myHumi > 75 && myAqi > 100) return "MƯA RÀO KHẢ NĂNG CAO";
-        if (myHumi > 70 && tempDiff < -2) return "NHIỀU MÂY, CÓ THỂ MƯA";
-        if (myHumi < 50 && myAqi < 50 && tempDiff > 2) return "NẮNG GẮT";
-        if (myHumi < 60 && myAqi < 70) return "NẮNG ĐẸP";
-        if (myAqi > 150) return "Ô NHIỄM KHÔNG KHÍ";
-        if (tempDiff > 5) return "NÓNG BẤT THƯỜNG";
-        if (tempDiff < -5) return "LẠNH BẤT THƯỜNG";
-        
-        if (sources.danang) {
-            return sources.danang.weather[0].description.toUpperCase();
-        }
-        return "THỜI TIẾT ỔN ĐỊNH";
     }
 
     function getWeatherIcon(weather) {
         const icons = {
-            'Clear': '☀️',
-            'Clouds': '☁️',
-            'Rain': '🌧️',
-            'Drizzle': '🌦️',
-            'Thunderstorm': '⛈️',
-            'Snow': '❄️',
-            'Mist': '🌫️',
-            'Fog': '🌫️',
-            'Haze': '🌫️'
+            'Clear': '☀️', 'Clouds': '☁️', 'Rain': '🌧️', 'Drizzle': '🌦️',
+            'Thunderstorm': '⛈️', 'Snow': '❄️', 'Mist': '🌫️', 'Fog': '🌫️', 'Haze': '🌫️'
         };
         return icons[weather] || '🌤️';
     }
 
     function calculateUV(data) {
-        const cloudCover = data.clouds.all;
-        const temp = data.main.temp;
-        let uv = 11 - (cloudCover / 10);
-        if (temp > 30) uv += 1;
-        if (temp < 20) uv -= 2;
+        let uv = 11 - (data.clouds.all / 10);
+        if (data.main.temp > 30) uv += 1;
+        if (data.main.temp < 20) uv -= 2;
         return Math.max(0, Math.min(11, uv)).toFixed(1);
     }
 
     function updateUVDesc(uv) {
         const val = parseFloat(uv);
-        let desc = '';
-        if (val < 3) desc = 'Thấp - An toàn';
-        else if (val < 6) desc = 'Trung bình - Cẩn thận';
-        else if (val < 8) desc = 'Cao - Bảo vệ da';
-        else desc = 'Rất cao - Nguy hiểm';
+        let desc = 'Thấp - An toàn';
+        if (val >= 3 && val < 6) desc = 'Trung bình - Cẩn thận';
+        else if (val >= 6 && val < 8) desc = 'Cao - Bảo vệ da';
+        else if (val >= 8) desc = 'Rất cao - Nguy hiểm';
         document.getElementById('uvDesc').innerText = desc;
     }
 
@@ -978,13 +699,96 @@
     }
 
     function formatTime(timestamp) {
-        const date = new Date(timestamp * 1000);
-        return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        return new Date(timestamp * 1000).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     }
 
-    // Initialize
+    async function displayWeather(city) {
+        const data = await fetchOpenWeatherData(city);
+        
+        if (!data || data.cod === "404") {
+            document.getElementById('locationName').innerText = 'Không tìm thấy';
+            document.getElementById('mainCondition').innerText = 'Thành phố không tồn tại';
+            return;
+        }
+
+        document.getElementById('locationName').innerText = data.name;
+        document.getElementById('mainTemp').innerText = Math.round(data.main.temp);
+        document.getElementById('feelsLike').innerText = Math.round(data.main.feels_like);
+        document.getElementById('humidity').innerText = data.main.humidity;
+        document.getElementById('windSpeed').innerText = data.wind.speed.toFixed(1);
+        document.getElementById('pressure').innerText = data.main.pressure;
+        document.getElementById('visibility').innerText = (data.visibility / 1000).toFixed(1);
+        document.getElementById('clouds').innerText = data.clouds.all;
+        document.getElementById('sunrise').innerText = formatTime(data.sys.sunrise);
+        document.getElementById('sunset').innerText = formatTime(data.sys.sunset);
+        document.getElementById('mainCondition').innerText = data.weather[0].description.toUpperCase();
+        document.getElementById('weatherIcon').innerText = getWeatherIcon(data.weather[0].main);
+        
+        const aqi = Math.floor(data.clouds.all * 1.5);
+        document.getElementById('aqiValue').innerText = aqi;
+        updateAQIStyle(aqi);
+        
+        const uv = calculateUV(data);
+        document.getElementById('uvIndex').innerText = uv;
+        updateUVDesc(uv);
+
+        // Load forecast
+        const forecastData = await fetchForecast(city);
+        if (forecastData && forecastData.list) {
+            displayForecast(forecastData);
+        }
+    }
+
+    function displayForecast(data) {
+        const grid = document.getElementById('forecastGrid');
+        grid.innerHTML = '';
+        
+        const daily = {};
+        data.list.forEach(item => {
+            const date = new Date(item.dt * 1000).toLocaleDateString('vi-VN');
+            if (!daily[date]) daily[date] = item;
+        });
+
+        Object.keys(daily).slice(0, 4).forEach(date => {
+            const item = daily[date];
+            const d = new Date(item.dt * 1000);
+            const dayName = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][d.getDay()];
+            
+            const card = document.createElement('div');
+            card.className = 'forecast-card';
+            card.innerHTML = `
+                <div class="forecast-day">${dayName}, ${date}</div>
+                <div class="forecast-icon">${getWeatherIcon(item.weather[0].main)}</div>
+                <div class="forecast-temp">${Math.round(item.main.temp)}°C</div>
+                <div class="forecast-temp-range">${Math.round(item.main.temp_min)}° ~ ${Math.round(item.main.temp_max)}°</div>
+                <div class="forecast-condition">${item.weather[0].description}</div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    // ===== EVENT LISTENERS =====
+    document.getElementById('locationSelect').addEventListener('change', (e) => {
+        displayWeather(e.target.value);
+    });
+
+    document.getElementById('searchBtn').addEventListener('click', () => {
+        const city = document.getElementById('customSearch').value.trim();
+        if (city) displayWeather(city);
+    });
+
+    document.getElementById('customSearch').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            const city = document.getElementById('customSearch').value.trim();
+            if (city) displayWeather(city);
+        }
+    });
+
+    // ===== INIT =====
     checkESPConnection();
-    handleLocationChange();
+    displayWeather('Da Nang');
     setInterval(checkESPConnection, 15000);
-    setInterval(handleLocationChange, 30000);
-    setInterval(fetchMultiSourceData, 300000);
+</script>
+
+</body>
+</html>
