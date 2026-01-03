@@ -34,7 +34,7 @@
             border-bottom: 1px solid rgba(59, 130, 246, 0.2);
             padding: 15px 30px;
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
             position: sticky;
             top: 0;
@@ -46,7 +46,9 @@
         .logo {
             display: flex;
             align-items: center;
-            gap: 15px;
+            justify-content: center;
+            flex: 1;
+            text-align: center;
         }
 
         .logo i {
@@ -54,17 +56,32 @@
             background: linear-gradient(135deg, #3b82f6, #10b981);
             background-clip: text;
             color: transparent;
+            margin-right: 10px;
+        }
+
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .logo-text .school {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #3b82f6;
+            margin-bottom: 3px;
+            letter-spacing: 0.5px;
         }
 
         .logo-text h1 {
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             font-weight: 700;
             color: white;
         }
 
         .logo-text p {
             font-size: 0.75rem;
-            color: rgba(255,255,255,0.5);
+            color: rgba(255,255,255,0.6);
             margin-top: 2px;
         }
 
@@ -526,6 +543,7 @@
     <div class="logo">
         <i class="fas fa-cloud-sun"></i>
         <div class="logo-text">
+            <div class="school">TRƯỜNG ĐẠI HỌC SƯ PHẠM KỸ THUẬT - ĐẠI HỌC ĐÀ NẴNG</div>
             <h1>ĐỒ ÁN TỐT NGHIỆP</h1>
             <p>Chuyên ngành Điện - Điện tử</p>
         </div>
@@ -823,4 +841,4 @@ document.getElementById('toggleChart').addEventListener('click', function() {
 </script>
 
 </body>
-</html> 
+</html>
