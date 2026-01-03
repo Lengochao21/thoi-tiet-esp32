@@ -520,26 +520,7 @@
 
 <div class="top-bar">
     <div class="logo">
-        <div class="ute-logo">
-            <svg width="65" height="65" viewBox="0 0 65 65" xmlns="http://www.w3.org/2000/svg">
-                <!-- Vòng tròn ngoài xanh -->
-                <circle cx="32.5" cy="32.5" r="31" fill="none" stroke="#3b82f6" stroke-width="2"/>
-                <circle cx="32.5" cy="32.5" r="30" fill="#1e3a8a"/>
-                
-                <!-- Atom symbol (nguyên tử) -->
-                <circle cx="32.5" cy="32.5" r="4" fill="#3b82f6"/>
-                
-                <!-- Electron orbits -->
-                <ellipse cx="32.5" cy="32.5" rx="12" ry="8" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0.7"/>
-                <ellipse cx="32.5" cy="32.5" rx="12" ry="8" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0.7" transform="rotate(60 32.5 32.5)"/>
-                <ellipse cx="32.5" cy="32.5" rx="12" ry="8" fill="none" stroke="#3b82f6" stroke-width="1.5" opacity="0.7" transform="rotate(120 32.5 32.5)"/>
-                
-                <!-- Electrons -->
-                <circle cx="44.5" cy="32.5" r="1.5" fill="#3b82f6"/>
-                <circle cx="24" cy="38" r="1.5" fill="#3b82f6"/>
-                <circle cx="24" cy="27" r="1.5" fill="#3b82f6"/>
-            </svg>
-        </div>
+        <i class="fas fa-cloud-sun"></i>
         <div class="logo-text">
             <h1>ĐỒ ÁN TỐT NGHIỆP</h1>
             <p>Chuyên ngành Điện - Điện tử</p>
@@ -645,7 +626,7 @@
     <div class="forecast-section">
         <div class="forecast-title">
             <i class="fas fa-calendar-days"></i>
-            Dự Báo 5 Ngày
+            Dự Báo 4 Ngày
         </div>
         <div class="forecast-grid" id="forecastGrid">
             <div class="forecast-card">
@@ -824,7 +805,7 @@
             }
         });
 
-        const dates = Object.keys(dailyData).slice(0, 5);
+        const dates = Object.keys(dailyData).slice(0, 4);
         dates.forEach((date, idx) => {
             const item = dailyData[date];
             const dayName = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'][new Date(item.dt * 1000).getDay()];
@@ -1004,4 +985,4 @@
     handleLocationChange();
     setInterval(checkESPConnection, 15000);
     setInterval(handleLocationChange, 30000);
-    setInterval(fetchMultiSourceData, 300000);  
+    setInterval(fetchMultiSourceData, 300000);
