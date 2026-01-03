@@ -842,7 +842,7 @@
         document.getElementById('humidity').innerText = myData.humi;
         document.getElementById('aqiValue').innerText = myData.ppm;
         updateAQIStyle(myData.ppm);
-        
+    
         if (multiSourceData.danang) {
             const data = multiSourceData.danang;
             document.getElementById('windSpeed').innerText = data.wind.speed.toFixed(1);
