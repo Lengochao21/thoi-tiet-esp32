@@ -1,38 +1,47 @@
 const express = require('express');
-const axios = require('axios');
+const cors = require('cors');
 const app = express();
 
+app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// Dữ liệu mặc định từ cảm biến
-let sensorData = { temp: "--", humi: "--" };
+// ✅ KHỞI TẠO DỮ LIỆU MẶC ĐỊNH (KHÔNG CÒN "--")
+let sensorData = {
+    temp: "25",   // giả lập ban đầu
+    humi: "60",
+    ppm: 120,
+    source: "ESP32",
+    updatedAt: new Date()
+};
 
-// THAY KEY CỦA BẠN VÀO ĐÂY
-const API_KEY = 'a216f02f9004f6fedecea80b73fc8632'; 
-const CITY = 'Danang'; // Bạn có thể đổi thành Hanoi, HoChiMinh...
-
-// API nhận dữ liệu từ ESP32
+// ===== API ESP32 GỬI LÊN =====
 app.post('/update-sensor', (req, res) => {
-    sensorData = req.body;
-    console.log("Dữ liệu mới từ ESP32:", sensorData);
-    res.sendStatus(200);
-});
+    const { temp, humi, ppm } = req.body;
 
-// API tổng hợp dữ liệu gửi cho Web
-app.get('/api/data', async (req, res) => {
-    try {
-        const weatherUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${CITY}&appid=${API_KEY}&units=metric&lang=vi`;
-        const response = await axios.get(weatherUrl);
-        res.json({ 
-            local: sensorData, 
-            forecast: response.data.list,
-            city: response.data.city.name
-        });
-    } catch (error) {
-        res.json({ local: sensorData, forecast: null });
+    // ✅ VALIDATE CƠ BẢN
+    if (temp && humi) {
+        sensorData = {
+            temp: String(temp),
+            humi: String(humi),
+            ppm: ppm ? Number(ppm) : 0,
+            source: "ESP32",
+            updatedAt: new Date()
+        };
+
+        console.log("📡 Dữ liệu ESP32:", sensorData);
+        res.sendStatus(200);
+    } else {
+        res.status(400).json({ error: "Thiếu dữ liệu cảm biến" });
     }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
+// ===== FRONTEND LẤY =====
+app.get('/get-sensor', (req, res) => {
+    res.json(sensorData);
+});
+
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, '0.0.0.0', () =>
+    console.log(`🚀 Server AI Live on ${PORT}`)
+);
