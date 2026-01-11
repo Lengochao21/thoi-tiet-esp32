@@ -1,55 +1,87 @@
+// ================== CONFIG ==================
+const REFRESH_INTERVAL = 30000;
+
 // ================== AUTO LOAD ==================
 loadMyStation();
-setInterval(loadMyStation, 30000);
+setInterval(loadMyStation, REFRESH_INTERVAL);
 
 // ================== FETCH BACKEND ==================
 async function loadMyStation() {
     try {
-        const res = await fetch('/predict-station1');
+        const res = await fetch('/get-sensor');
+        if (!res.ok) throw new Error("API error");
+
         const data = await res.json();
-        renderUI(data);
+        renderMyStation(data);
+
     } catch (e) {
         console.error("Frontend error:", e);
+        showError();
     }
 }
 
-// ================== RENDER ==================
-function renderUI(data) {
-    const esp = data.espData;
-    const ow = data.openWeatherData;
-    const pred = data.predictionToday;
-
+// ================== RENDER MAIN ==================
+function renderMyStation(data) {
     document.getElementById('locationName').innerText = "TRẠM CỦA TÔI";
 
-    document.getElementById('mainTemp').innerText = esp.temperature + "°C";
-    document.getElementById('humidity').innerText = esp.humidity + "%";
+    // ---- Temperature ----
+    document.getElementById('mainTemp').innerText =
+        data.temperature !== undefined
+            ? data.temperature.toFixed(1) + "°C"
+            : "--";
 
-    document.getElementById('weatherIcon').innerText =
-        getWeatherIcon(ow.weather);
+    // ---- Humidity ----
+    document.getElementById('humidity').innerText =
+        data.humidity !== undefined
+            ? data.humidity.toFixed(0) + "%"
+            : "--";
 
+    // ---- AQI / CO2 ----
+    const aqi = data.co2Level ?? 0;
+    document.getElementById('aqiValue').innerText = aqi;
+    updateAQIStyle(aqi);
+
+    // ---- Weather condition (ESP station) ----
     document.getElementById('mainCondition').innerText =
-        pred.recommendation;
+        buildStationCondition(data);
 
-    document.getElementById('aqiValue').innerText = esp.co2Level;
-    updateAQIStyle(esp.co2Level);
+    // ---- Icon (giả lập theo nhiệt độ + độ ẩm) ----
+    document.getElementById('weatherIcon').innerText =
+        getStationIcon(data);
 
-    document.getElementById('confidence').innerText =
-        pred.confidence + "%";
+    // ---- Last update ----
+    if (data.lastUpdate) {
+        const t = new Date(data.lastUpdate);
+        document.getElementById('lastUpdate').innerText =
+            t.toLocaleTimeString('vi-VN');
+    }
+}
+
+// ================== LOGIC PHÂN TÍCH ==================
+function buildStationCondition(d) {
+    if (d.temperature > 32 && d.humidity > 75)
+        return "NÓNG ẨM – DỄ MƯA DÔNG";
+
+    if (d.temperature > 35)
+        return "NẮNG NÓNG GAY GẮT";
+
+    if (d.humidity > 85)
+        return "ẨM CAO – CÓ KHẢ NĂNG MƯA";
+
+    return "THỜI TIẾT ỔN ĐỊNH";
+}
+
+function getStationIcon(d) {
+    if (d.humidity > 85) return "🌧️";
+    if (d.temperature > 34) return "☀️";
+    if (d.temperature < 20) return "🌥️";
+    return "⛅";
 }
 
 // ================== UI HELPERS ==================
-function getWeatherIcon(w) {
-    const icons = {
-        Clear: "☀️",
-        Clouds: "☁️",
-        Rain: "🌧️",
-        Thunderstorm: "⛈️"
-    };
-    return icons[w] || "🌤️";
-}
-
 function updateAQIStyle(v) {
     const badge = document.getElementById('aqiBadge');
+
     badge.className = "aqi-badge " +
         (v < 300 ? "aqi-good" :
         (v < 600 ? "aqi-moderate" : "aqi-bad"));
@@ -57,4 +89,9 @@ function updateAQIStyle(v) {
     badge.innerText =
         v < 300 ? "TỐT" :
         v < 600 ? "TRUNG BÌNH" : "Ô NHIỄM";
+}
+
+function showError() {
+    document.getElementById('mainCondition').innerText =
+        "KHÔNG KẾT NỐI ĐƯỢC TRẠM";
 }
