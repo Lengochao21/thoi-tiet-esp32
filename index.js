@@ -1,3 +1,4 @@
+// ======================== IMPORT ========================
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
@@ -5,137 +6,100 @@ const axios = require('axios');
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.static('public'));
 
-/* ================== OPEN WEATHER ================== */
+// ======================== CONFIG ========================
 const API_KEY = "a216f02f9004f6fedecea80b73fc8632";
 const CITY = "Da Nang";
 
-/* ================== DATA ESP ================== */
+// ======================== SENSOR DATA ========================
 let sensorData = {
-  temperature: null,
-  humidity: null,
-  rainStatus: null,
-  dustDensity: null,
-  co2Level: null,
-  uvIndex: null,
-  lastUpdate: 0
+    temperature: 0,
+    humidity: 0,
+    dustDensity: 0,
+    co2Level: 0,
+    rainStatus: 1,
+    uvIndex: 0,
+    lastUpdate: 0
 };
 
-/* ================== NHẬN ESP ================== */
+// ======================== ESP32 PUSH DATA ========================
 app.post('/update-sensor', (req, res) => {
-  sensorData = {
-    ...req.body,
-    lastUpdate: Date.now()
-  };
-  console.log("📡 ESP32:", sensorData);
-  res.sendStatus(200);
-});
-
-/* ================== API CHO WEB ================== */
-app.get('/my-station', async (req, res) => {
-  try {
-    /* ===== LẤY OPEN WEATHER ===== */
-    const currentRes = await axios.get(
-      `https://api.openweathermap.org/data/2.5/weather?q=${CITY}&units=metric&appid=${API_KEY}&lang=vi`
-    );
-
-    const forecastRes = await axios.get(
-      `https://api.openweathermap.org/data/2.5/forecast?q=${CITY}&units=metric&appid=${API_KEY}&lang=vi`
-    );
-
-    const owCurrent = currentRes.data;
-    const owForecast = forecastRes.data;
-
-    /* ===== SO SÁNH HIỆN TẠI ===== */
-    const comparison = {
-      temperatureDiff: diff(sensorData.temperature, owCurrent.main.temp),
-      humidityDiff: diff(sensorData.humidity, owCurrent.main.humidity),
-      rainMatch: compareRain(sensorData.rainStatus, owCurrent.weather[0].main),
+    sensorData = {
+        ...req.body,
+        lastUpdate: Date.now()
     };
-
-    /* ===== DỰ BÁO 4 NGÀY (HIỆU CHỈNH THEO TRẠM) ===== */
-    const daily = {};
-    owForecast.list.forEach(item => {
-      const date = new Date(item.dt * 1000).toLocaleDateString('vi-VN');
-      if (!daily[date]) {
-        daily[date] = { temp: [], hum: [], weather: item.weather[0].main };
-      }
-      daily[date].temp.push(item.main.temp);
-      daily[date].hum.push(item.main.humidity);
-    });
-
-    const forecast4Days = Object.keys(daily).slice(0, 4).map(date => {
-      const avgTemp = avg(daily[date].temp);
-      const avgHum = avg(daily[date].hum);
-
-      /* 🔥 HIỆU CHỈNH = TRUNG BÌNH ESP + OPEN WEATHER */
-      const finalTemp = sensorData.temperature
-        ? (sensorData.temperature + avgTemp) / 2
-        : avgTemp;
-
-      const finalHum = sensorData.humidity
-        ? (sensorData.humidity + avgHum) / 2
-        : avgHum;
-
-      return {
-        date,
-        temperature: Math.round(finalTemp),
-        humidity: Math.round(finalHum),
-        weather: daily[date].weather,
-        rainChance: calcRainChance(finalTemp, finalHum),
-        airQuality: assessAir(sensorData.dustDensity || 0)
-      };
-    });
-
-    /* ===== TRẢ KẾT QUẢ ===== */
-    res.json({
-      station: sensorData,
-      openWeather: {
-        temp: owCurrent.main.temp,
-        humidity: owCurrent.main.humidity,
-        weather: owCurrent.weather[0].description
-      },
-      comparison,
-      forecast4Days
-    });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Lỗi dự báo" });
-  }
+    console.log("📡 ESP32:", sensorData);
+    res.sendStatus(200);
 });
 
-/* ================== HÀM PHỤ ================== */
-function avg(arr) {
-  return arr.reduce((a, b) => a + b, 0) / arr.length;
-}
+// ======================== CORE API (FRONTEND GỌI) ========================
+app.get('/predict-station1', async (req, res) => {
+    try {
+        const ow = await axios.get(
+            `https://api.openweathermap.org/data/2.5/weather?q=${CITY}&units=metric&appid=${API_KEY}&lang=vi`
+        );
 
-function diff(a, b) {
-  if (a == null) return null;
-  return Math.abs(a - b).toFixed(1);
-}
+        const tempOW = ow.data.main.temp;
+        const humOW = ow.data.main.humidity;
+        const weather = ow.data.weather[0].main;
 
-function compareRain(esp, ow) {
-  const espRain = esp === 0;
-  const owRain = ow === "Rain" || ow === "Drizzle";
-  return espRain === owRain ? "PHÙ HỢP" : "KHÔNG KHỚP";
+        const tempESP = sensorData.temperature;
+        const humESP = sensorData.humidity;
+
+        const accuracyTemp = calcAccuracy(tempESP, tempOW, 10);
+        const accuracyHum = calcAccuracy(humESP, humOW, 2);
+
+        const rainChance = calcRainChance(tempESP, humESP);
+        const recommendation = getRecommendation(tempESP, weather, rainChance);
+
+        res.json({
+            espData: sensorData,
+            openWeatherData: {
+                temp: Math.round(tempOW),
+                humidity: humOW,
+                weather: weather,
+                description: ow.data.weather[0].description
+            },
+            comparison: {
+                temperature: accuracyTemp,
+                humidity: accuracyHum
+            },
+            predictionToday: {
+                rainChance,
+                recommendation,
+                confidence: Math.round((accuracyTemp + accuracyHum) / 2)
+            }
+        });
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "OpenWeather error" });
+    }
+});
+
+// ======================== FUNCTIONS ========================
+function calcAccuracy(esp, ow, factor) {
+    const diff = Math.abs(esp - ow);
+    return Math.max(0, 100 - diff * factor);
 }
 
 function calcRainChance(temp, hum) {
-  let p = 0;
-  if (hum > 80) p += 50;
-  if (temp < 25 && hum > 70) p += 30;
-  return Math.min(100, p);
+    let chance = 0;
+    if (hum > 80) chance += 60;
+    if (temp < 25) chance += 20;
+    return Math.min(100, chance);
 }
 
-function assessAir(dust) {
-  if (dust < 35) return "TỐT";
-  if (dust < 75) return "TRUNG BÌNH";
-  return "Ô NHIỄM";
+function getRecommendation(temp, weather, rainChance) {
+    if (rainChance > 70) return "☔ Khả năng mưa cao";
+    if (temp > 35) return "🔥 Nắng nóng";
+    if (weather === 'Clear') return "☀️ Trời nắng";
+    return "✅ Thời tiết ổn định";
 }
 
-/* ================== SERVER ================== */
+// ======================== SERVER ========================
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log("🚀 Server chạy cổng", PORT);
-});
+app.listen(PORT, '0.0.0.0', () =>
+    console.log("🚀 Backend running on port", PORT)
+);
