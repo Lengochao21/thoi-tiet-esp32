@@ -33,7 +33,12 @@ app.post('/update-sensor', (req, res) => {
     res.sendStatus(200);
 });
 
-// ======================== CORE API (FRONTEND GỌI) ========================
+// ======================== API LẤY DATA ESP ========================
+app.get('/get-sensor', (req, res) => {
+    res.json(sensorData);
+});
+
+// ======================== CORE API (AI + DỰ BÁO) ========================
 app.get('/predict-station1', async (req, res) => {
     try {
         const ow = await axios.get(
@@ -58,7 +63,7 @@ app.get('/predict-station1', async (req, res) => {
             openWeatherData: {
                 temp: Math.round(tempOW),
                 humidity: humOW,
-                weather: weather,
+                weather,
                 description: ow.data.weather[0].description
             },
             comparison: {
