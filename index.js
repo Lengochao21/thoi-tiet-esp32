@@ -9,8 +9,8 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // ======================== CONFIG ========================
-const API_KEY = "a216f02f9004f6fedecea80b73fc8632";
-const CITY = "Da Nang";
+const API_KEY = process.env.OPENWEATHER_API_KEY || "a216f02f9004f6fedecea80b73fc8632";
+const CITY = process.env.CITY || "Da Nang";
 
 // ======================== SENSOR DATA ========================
 let sensorData = {
@@ -104,7 +104,7 @@ function getRecommendation(temp, weather, rainChance) {
 }
 
 // ======================== SERVER ========================
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 14001;
 app.listen(PORT, '0.0.0.0', () =>
     console.log("running on http://localhost:" + PORT)
 );
