@@ -1,526 +1,892 @@
 <!DOCTYPE html>
 <html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>UTE Weather Station</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
-        :root { --primary: #3b82f6; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); color: #f8fafc; min-height: 100vh; }
-        .top-bar { background: rgba(15, 23, 42, 0.95); border-bottom: 1px solid rgba(59, 130, 246, 0.2); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; position: sticky; top: 0; z-index: 100; }
-        .logo { display: flex; align-items: center; gap: 10px; }
-        .logo i { font-size: 2rem; color: var(--primary); }
-        .logo-text { display: flex; flex-direction: column; }
-        .logo-text .school { font-size: 0.75rem; font-weight: 700; color: var(--primary); }
-        .logo-text h1 { font-size: 0.95rem; font-weight: 700; }
-        .logo-text p { font-size: 0.65rem; color: rgba(255,255,255,0.6); }
-        .status-bar { display: flex; gap: 10px; }
-        .status-item { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; font-size: 0.8rem; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; animation: pulse 2s infinite; background: var(--danger); }
-        .status-dot.connected { background: var(--success); }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .location-select { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: white; padding: 10px 15px; border-radius: 8px; font-size: 0.9rem; cursor: pointer; }
-        .location-select option { background: #1e293b; color: white; }
-        .container { max-width: 1400px; margin: 0 auto; padding: 30px; }
-        .sensor-status { background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(16, 185, 129, 0.15)); border-radius: 20px; padding: 20px; margin-bottom: 30px; border: 1px solid rgba(59, 130, 246, 0.3); }
-        .sensor-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-        .sensor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
-        .sensor-box { background: rgba(30, 41, 59, 0.6); padding: 15px; border-radius: 12px; border-left: 4px solid var(--primary); }
-        .sensor-box.temp { border-left-color: var(--danger); }
-        .sensor-box.humidity { border-left-color: var(--primary); }
-        .sensor-box.dust { border-left-color: var(--warning); }
-        .sensor-box.co2 { border-left-color: #a78bfa; }
-        .sensor-box.rain { border-left-color: var(--success); }
-        .sensor-label { font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-bottom: 5px; }
-        .sensor-value { font-size: 1.8rem; font-weight: 700; color: white; }
-        .sensor-unit { font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 3px; }
-        .hero-weather { background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(16, 185, 129, 0.2)); border-radius: 20px; padding: 40px; margin-bottom: 30px; backdrop-filter: blur(20px); border: 1px solid rgba(59, 130, 246, 0.3); }
-        .station-badge { display: inline-block; padding: 5px 12px; background: linear-gradient(135deg, #ef4444, #dc2626); border-radius: 20px; font-size: 0.7rem; font-weight: 700; margin-bottom: 10px; }
-        .location-title { margin-bottom: 20px; }
-        .location-title h2 { font-size: 1.8rem; font-weight: 700; }
-        .main-weather { display: grid; grid-template-columns: 1.5fr 2fr; gap: 40px; align-items: center; }
-        .temp-display { text-align: center; }
-        .big-temp { font-size: 5rem; font-weight: 800; background: linear-gradient(135deg, #fff, var(--primary)); background-clip: text; color: transparent; }
-        .weather-icon { font-size: 4rem; margin-bottom: 15px; }
-        .condition { font-size: 1.2rem; color: rgba(255,255,255,0.8); }
-        .weather-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-        .stat-item { background: rgba(30, 41, 59, 0.5); padding: 15px; border-radius: 12px; }
-        .stat-label { font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-bottom: 3px; }
-        .stat-value { font-size: 1.4rem; font-weight: 700; }
-        .forecast-section { margin-bottom: 30px; }
-        .forecast-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
-        .forecast-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; }
-        .forecast-card { background: rgba(30, 41, 59, 0.8); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: center; }
-        .forecast-day { font-size: 0.85rem; color: rgba(255,255,255,0.6); margin-bottom: 8px; }
-        .forecast-icon { font-size: 2rem; margin: 5px 0; }
-        .forecast-temp { font-size: 1rem; font-weight: 700; }
-        .forecast-info { font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 5px; }
-        .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
-        .detail-card { background: rgba(30, 41, 59, 0.8); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); }
-        .detail-card i { font-size: 1.3rem; color: var(--primary); margin-right: 8px; }
-        .detail-title { font-size: 0.9rem; color: rgba(255,255,255,0.7); text-transform: uppercase; margin-bottom: 10px; }
-        .detail-value { font-size: 2rem; font-weight: 700; }
-        .chart-container { background: rgba(30, 41, 59, 0.8); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 30px; height: 300px; }
-        .footer { text-align: center; padding: 30px 20px; border-top: 1px solid rgba(59, 130, 246, 0.2); margin-top: 50px; }
-        .footer .student { font-size: 1rem; font-weight: 700; color: var(--primary); margin-bottom: 8px; }
-        .footer .info { font-size: 0.85rem; color: rgba(255,255,255,0.5); }
-        @media (max-width: 768px) { .main-weather { grid-template-columns: 1fr; gap: 20px; } .sensor-grid { grid-template-columns: repeat(2, 1fr); } }
+      :root {
+        --primary: #3b82f6;
+        --success: #10b981;
+        --danger: #ef4444;
+        --warning: #f59e0b;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+        color: #f8fafc;
+        min-height: 100vh;
+      }
+      .top-bar {
+        background: rgba(15, 23, 42, 0.95);
+        border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+        padding: 15px 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 20px;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .logo i {
+        font-size: 2rem;
+        color: var(--primary);
+      }
+      .logo-text {
+        display: flex;
+        flex-direction: column;
+      }
+      .logo-text .school {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--primary);
+      }
+      .logo-text h1 {
+        font-size: 0.95rem;
+        font-weight: 700;
+      }
+      .logo-text p {
+        font-size: 0.65rem;
+        color: rgba(255, 255, 255, 0.6);
+      }
+      .status-bar {
+        display: flex;
+        gap: 10px;
+      }
+      .status-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 8px;
+        font-size: 0.8rem;
+      }
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+        background: var(--danger);
+      }
+      .status-dot.connected {
+        background: var(--success);
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+      .location-select {
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        color: white;
+        padding: 10px 15px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        cursor: pointer;
+      }
+      .location-select option {
+        background: #1e293b;
+        color: white;
+      }
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 30px;
+      }
+      .sensor-status {
+        background: linear-gradient(
+          135deg,
+          rgba(59, 130, 246, 0.15),
+          rgba(16, 185, 129, 0.15)
+        );
+        border-radius: 20px;
+        padding: 20px;
+        margin-bottom: 30px;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+      }
+      .sensor-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .sensor-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 15px;
+      }
+      .sensor-box {
+        background: rgba(30, 41, 59, 0.6);
+        padding: 15px;
+        border-radius: 12px;
+        border-left: 4px solid var(--primary);
+      }
+      .sensor-box.temp {
+        border-left-color: var(--danger);
+      }
+      .sensor-box.humidity {
+        border-left-color: var(--primary);
+      }
+      .sensor-box.dust {
+        border-left-color: var(--warning);
+      }
+      .sensor-box.co2 {
+        border-left-color: #a78bfa;
+      }
+      .sensor-box.rain {
+        border-left-color: var(--success);
+      }
+      .sensor-box.aqi {
+        border-left-color: #06b6d4;
+      }
+      .sensor-box.uv {
+        border-left-color: #f97316;
+      }
+      .sensor-label {
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-bottom: 5px;
+      }
+      .sensor-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: white;
+      }
+      .sensor-unit {
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.5);
+        margin-top: 3px;
+      }
+      .hero-weather {
+        background: linear-gradient(
+          135deg,
+          rgba(59, 130, 246, 0.2),
+          rgba(16, 185, 129, 0.2)
+        );
+        border-radius: 20px;
+        padding: 40px;
+        margin-bottom: 30px;
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+      }
+      .station-badge {
+        display: inline-block;
+        padding: 5px 12px;
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+      }
+      .location-title {
+        margin-bottom: 20px;
+      }
+      .location-title h2 {
+        font-size: 1.8rem;
+        font-weight: 700;
+      }
+      .main-weather {
+        display: grid;
+        grid-template-columns: 1.5fr 2fr;
+        gap: 40px;
+        align-items: center;
+      }
+      .temp-display {
+        text-align: center;
+      }
+      .big-temp {
+        font-size: 5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #fff, var(--primary));
+        background-clip: text;
+        color: transparent;
+      }
+      .weather-icon {
+        font-size: 4rem;
+        margin-bottom: 15px;
+      }
+      .condition {
+        font-size: 1.2rem;
+        color: rgba(255, 255, 255, 0.8);
+      }
+      .weather-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+      }
+      .stat-item {
+        background: rgba(30, 41, 59, 0.5);
+        padding: 15px;
+        border-radius: 12px;
+      }
+      .stat-label {
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-bottom: 3px;
+      }
+      .stat-value {
+        font-size: 1.4rem;
+        font-weight: 700;
+      }
+      .forecast-section {
+        margin-bottom: 30px;
+      }
+      .forecast-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .forecast-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 12px;
+      }
+      .forecast-card {
+        background: rgba(30, 41, 59, 0.8);
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        text-align: center;
+      }
+      .forecast-day {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-bottom: 8px;
+      }
+      .forecast-icon {
+        font-size: 2rem;
+        margin: 5px 0;
+      }
+      .forecast-temp {
+        font-size: 1rem;
+        font-weight: 700;
+      }
+      .forecast-info {
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.5);
+        margin-top: 5px;
+      }
+      .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+      }
+      .detail-card {
+        background: rgba(30, 41, 59, 0.8);
+        padding: 20px;
+        border-radius: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .detail-card i {
+        font-size: 1.3rem;
+        color: var(--primary);
+        margin-right: 8px;
+      }
+      .detail-title {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.7);
+        text-transform: uppercase;
+        margin-bottom: 10px;
+      }
+      .detail-value {
+        font-size: 2rem;
+        font-weight: 700;
+      }
+      .chart-container {
+        background: rgba(30, 41, 59, 0.8);
+        padding: 20px;
+        border-radius: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 30px;
+        height: 300px;
+      }
+      .footer {
+        text-align: center;
+        padding: 30px 20px;
+        border-top: 1px solid rgba(59, 130, 246, 0.2);
+        margin-top: 50px;
+      }
+      .footer .student {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: 8px;
+      }
+      .footer .info {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.5);
+      }
+      @media (max-width: 768px) {
+        .main-weather {
+          grid-template-columns: 1fr;
+          gap: 20px;
+        }
+        .sensor-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
     </style>
-</head>
-<body>
-
-<div class="top-bar">
-    <div class="logo">
+  </head>
+  <body>
+    <div class="top-bar">
+      <div class="logo">
         <i class="fas fa-cloud-sun"></i>
         <div class="logo-text">
-            <div class="school">TRƯỜNG ĐH SƯ PHẠM KỸ THUẬT - ĐH ĐÀ NẴNG</div>
-            <h1>ĐỒ ÁN TỐT NGHIỆP</h1>
-            <p>Điện - Điện tử</p>
+          <h1>UTE Weather Station</h1>
         </div>
-    </div>
-    <div class="status-bar">
+      </div>
+      <div class="status-bar">
         <div class="status-item">
-            <div class="status-dot" id="espStatus"></div>
-            <span id="espStatusText">ESP: Chưa kết nối</span>
+          <div class="status-dot" id="espStatus"></div>
+          <span id="espStatusText">ESP: Chưa kết nối</span>
         </div>
-    </div>
-    <select class="location-select" id="locationSelect">
+      </div>
+      <select class="location-select" id="locationSelect">
         <option value="station1">🔴 TRẠM 1 - KHU VỰC CHÍNH</option>
         <option value="Da Nang">📍 Đà Nẵng</option>
         <option value="Hanoi">Hà Nội</option>
         <option value="Ho Chi Minh">TP. Hồ Chí Minh</option>
         <option value="Hai Phong">Hải Phòng</option>
-    </select>
-</div>
+      </select>
+    </div>
 
-<div class="container">
-    <!-- 🔴 TRẠM 1: Trạng thái 5 cảm biến -->
-    <div id="station1Section">
+    <div class="container">
+      <!-- 🔴 TRẠM 1: Trạng thái 5 cảm biến -->
+      <div id="station1Section">
         <div class="sensor-status">
-            <div class="sensor-title">
-                <i class="fas fa-microchip"></i> ESP32 Real-time
+          <div class="sensor-title">
+            <i class="fas fa-microchip"></i> ESP32 Real-time
+          </div>
+          <div class="sensor-grid">
+            <div class="sensor-box temp">
+              <div class="sensor-label">🌡️ Nhiệt Độ</div>
+              <div class="sensor-value" id="sensorTemp">--</div>
+              <div class="sensor-unit">°C</div>
             </div>
-            <div class="sensor-grid">
-                <div class="sensor-box temp">
-                    <div class="sensor-label">🌡️ Nhiệt Độ</div>
-                    <div class="sensor-value" id="sensorTemp">--</div>
-                    <div class="sensor-unit">°C</div>
-                </div>
-                <div class="sensor-box humidity">
-                    <div class="sensor-label">💧 Độ Ẩm</div>
-                    <div class="sensor-value" id="sensorHumidity">--</div>
-                    <div class="sensor-unit">%</div>
-                </div>
-                <div class="sensor-box dust">
-                    <div class="sensor-label">💨 Bụi (PM2.5)</div>
-                    <div class="sensor-value" id="sensorDust">--</div>
-                    <div class="sensor-unit">µg/m³</div>
-                </div>
-                <div class="sensor-box co2">
-                    <div class="sensor-label">🔋 MQ-135</div>
-                    <div class="sensor-value" id="sensorCO2">--</div>
-                    <div class="sensor-unit" id="gasType">Đang đo...</div>
-                    <div style="font-size: 0.75rem; color: var(--primary); margin-top: 5px; font-weight: 600;" id="airQuality">-</div>
-                </div>
-                <div class="sensor-box rain">
-                    <div class="sensor-label">🌧️ Trạng Thái Mưa</div>
-                    <div class="sensor-value" id="sensorRain" style="font-size: 1.2rem;">--</div>
-                    <div class="sensor-unit">Cảm biến LoRa</div>
-                </div>
+            <div class="sensor-box humidity">
+              <div class="sensor-label">💧 Độ Ẩm</div>
+              <div class="sensor-value" id="sensorHumidity">--</div>
+              <div class="sensor-unit">%</div>
             </div>
+            <div class="sensor-box dust">
+              <div class="sensor-label">💨 Bụi (PM2.5)</div>
+              <div class="sensor-value" id="sensorDust">--</div>
+              <div class="sensor-unit">µg/m³</div>
+            </div>
+            <div class="sensor-box co2">
+              <div class="sensor-label">🔋 MQ-135</div>
+              <div class="sensor-value" id="sensorCO2">--</div>
+              <div class="sensor-unit" id="gasType">Đang đo...</div>
+              <div
+                style="
+                  font-size: 0.75rem;
+                  color: var(--primary);
+                  margin-top: 5px;
+                  font-weight: 600;
+                "
+                id="airQuality"
+              >
+                -
+              </div>
+            </div>
+            <div class="sensor-box rain">
+              <div class="sensor-label">🌧️ Trạng Thái Mưa</div>
+              <div
+                class="sensor-value"
+                id="sensorRain"
+                style="font-size: 1.2rem"
+              >
+                --
+              </div>
+              <div class="sensor-unit">Cảm biến LoRa</div>
+            </div>
+            <div class="sensor-box aqi">
+              <div class="sensor-label">🌬️ Chất Lượng KK</div>
+              <div class="sensor-value" id="aqiValue">--</div>
+              <div class="sensor-unit" id="aqiBadge">Đang tải</div>
+            </div>
+            <div class="sensor-box uv">
+              <div class="sensor-label">☀️ Chỉ Số UV</div>
+              <div class="sensor-value" id="uvIndex">--</div>
+              <div class="sensor-unit" id="uvDesc">Đang tải</div>
+            </div>
+          </div>
         </div>
 
         <div class="hero-weather">
-            <div class="station-badge">🔴 TRẠM 1 - TRẠM CHÍNH</div>
-            <div class="location-title">
-                <h2 id="locationName">TRẠM 1 - ĐÀ NẴNG</h2>
+          <div class="station-badge">🔴 TRẠM 1 - TRẠM CHÍNH</div>
+          <div class="location-title">
+            <h2 id="locationName">TRẠM 1 - ĐÀ NẴNG</h2>
+          </div>
+          <div class="main-weather">
+            <div class="temp-display">
+              <div class="weather-icon" id="weatherIcon">🌤️</div>
+              <div class="big-temp"><span id="mainTemp">--</span>°C</div>
+              <div class="condition" id="mainCondition">Đang tải...</div>
             </div>
-            <div class="main-weather">
-                <div class="temp-display">
-                    <div class="weather-icon" id="weatherIcon">🌤️</div>
-                    <div class="big-temp"><span id="mainTemp">--</span>°C</div>
-                    <div class="condition" id="mainCondition">Đang tải...</div>
-                </div>
-                <div class="weather-stats">
-                    <div class="stat-item">
-                        <div class="stat-label">Cảm giác</div>
-                        <div class="stat-value"><span id="feelsLike">--</span>°C</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">Áp suất</div>
-                        <div class="stat-value"><span id="pressure">--</span> hPa</div>
-                    </div>
-                </div>
+            <div class="weather-stats">
+              <div class="stat-item">
+                <div class="stat-label">Cảm giác</div>
+                <div class="stat-value"><span id="feelsLike">--</span>°C</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-label">Áp suất</div>
+                <div class="stat-value"><span id="pressure">--</span> hPa</div>
+              </div>
             </div>
+          </div>
         </div>
 
         <div class="forecast-section">
-            <div class="forecast-title">
-                <i class="fas fa-calendar"></i> 📅 Dự Báo 4 Ngày (OpenWeatherMap)
+          <div class="forecast-title">
+            <i class="fas fa-calendar"></i> 📅 Dự Báo 4 Ngày (OpenWeatherMap)
+          </div>
+          <div class="forecast-grid" id="forecastGrid">
+            <div class="forecast-card">
+              <div class="forecast-day">Đang tải...</div>
             </div>
-            <div class="forecast-grid" id="forecastGrid">
-                <div class="forecast-card"><div class="forecast-day">Đang tải...</div></div>
-            </div>
-            <div class="chart-container">
-                <canvas id="forecastChart"></canvas>
-            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="forecastChart"></canvas>
+          </div>
         </div>
-    </div>
+      </div>
 
-    <!-- 🌐 CÁC ĐỊA ĐIỂM KHÁC: OpenWeather Forecast -->
-    <div id="otherLocationSection" style="display:none;">
+      <!-- 🌐 CÁC ĐỊA ĐIỂM KHÁC: OpenWeather Forecast -->
+      <div id="otherLocationSection" style="display: none">
         <div class="hero-weather">
-            <div class="location-title">
-                <h2 id="otherLocationName">Đang tải...</h2>
+          <div class="location-title">
+            <h2 id="otherLocationName">Đang tải...</h2>
+          </div>
+          <div class="main-weather">
+            <div class="temp-display">
+              <div class="weather-icon" id="otherWeatherIcon">🌤️</div>
+              <div class="big-temp"><span id="otherMainTemp">--</span>°C</div>
+              <div class="condition" id="otherMainCondition">Đang tải...</div>
             </div>
-            <div class="main-weather">
-                <div class="temp-display">
-                    <div class="weather-icon" id="otherWeatherIcon">🌤️</div>
-                    <div class="big-temp"><span id="otherMainTemp">--</span>°C</div>
-                    <div class="condition" id="otherMainCondition">Đang tải...</div>
+            <div class="weather-stats">
+              <div class="stat-item">
+                <div class="stat-label">Độ ẩm</div>
+                <div class="stat-value">
+                  <span id="otherHumidity">--</span>%
                 </div>
-                <div class="weather-stats">
-                    <div class="stat-item">
-                        <div class="stat-label">Độ ẩm</div>
-                        <div class="stat-value"><span id="otherHumidity">--</span>%</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">Gió</div>
-                        <div class="stat-value"><span id="otherWind">--</span> m/s</div>
-                    </div>
-                </div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-label">Gió</div>
+                <div class="stat-value"><span id="otherWind">--</span> m/s</div>
+              </div>
             </div>
+          </div>
         </div>
 
         <div class="forecast-section">
-            <div class="forecast-title">
-                <i class="fas fa-calendar"></i> 📅 Dự Báo 4 Ngày (OpenWeatherMap)
+          <div class="forecast-title">
+            <i class="fas fa-calendar"></i> 📅 Dự Báo 4 Ngày (OpenWeatherMap)
+          </div>
+          <div class="forecast-grid" id="otherForecastGrid">
+            <div class="forecast-card">
+              <div class="forecast-day">Đang tải...</div>
             </div>
-            <div class="forecast-grid" id="otherForecastGrid">
-                <div class="forecast-card"><div class="forecast-day">Đang tải...</div></div>
-            </div>
-            <div class="chart-container">
-                <canvas id="otherForecastChart"></canvas>
-            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="otherForecastChart"></canvas>
+          </div>
         </div>
+      </div>
+
+      <!-- Detail Cards -->
+      <div class="detail-grid">
+        <div class="detail-card">
+          <div>
+            <i class="fas fa-eye"></i><span class="detail-title">Tầm Nhìn</span>
+          </div>
+          <div class="detail-value"><span id="visibility">--</span> km</div>
+        </div>
+        <div class="detail-card">
+          <div>
+            <i class="fas fa-cloud"></i
+            ><span class="detail-title">Độ Phủ Mây</span>
+          </div>
+          <div class="detail-value"><span id="clouds">--</span>%</div>
+        </div>
+      </div>
     </div>
 
-    <!-- Detail Cards -->
-    <div class="detail-grid">
-        <div class="detail-card">
-            <div><i class="fas fa-wind"></i><span class="detail-title">Chất Lượng KK</span></div>
-            <div class="detail-value" id="aqiValue">--</div>
-            <div style="font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-top: 5px;" id="aqiBadge">Đang tải</div>
-        </div>
-        <div class="detail-card">
-            <div><i class="fas fa-sun"></i><span class="detail-title">Chỉ Số UV</span></div>
-            <div class="detail-value" id="uvIndex">--</div>
-            <div style="font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-top: 5px;" id="uvDesc">Đang tải</div>
-        </div>
-        <div class="detail-card">
-            <div><i class="fas fa-eye"></i><span class="detail-title">Tầm Nhìn</span></div>
-            <div class="detail-value"><span id="visibility">--</span> km</div>
-        </div>
-        <div class="detail-card">
-            <div><i class="fas fa-cloud"></i><span class="detail-title">Độ Phủ Mây</span></div>
-            <div class="detail-value"><span id="clouds">--</span>%</div>
-        </div>
+    <div class="footer">
+      <div class="info">© 2026 Lê Ngọc Hảo, All rights reserved.</div>
     </div>
-</div>
 
-<div class="footer">
-    <div class="student">SINH VIÊN: LÊ NGỌC HẢO | GVHD: ThS ĐỖ VIẾT ƠN</div>
-    <div class="info">THIẾT KẾ HỆ THỐNG GIÁM SÁT VÀ CHẤT LƯỢNG KHÔNG KHÍ</div>
-    <div class="info">© 2025 UTE Weather Station</div>
-</div>
+    <script>
+      const API_KEY = "a216f02f9004f6fedecea80b73fc8632";
+      let forecastChart = null;
 
-<script>
-const API_KEY = "a216f02f9004f6fedecea80b73fc8632";
-let forecastChart = null;
+      function getWeatherIcon(weather) {
+        const icons = {
+          Clear: "☀️",
+          Clouds: "☁️",
+          Rain: "🌧️",
+          Thunderstorm: "⛈️",
+          Snow: "❄️",
+          Mist: "🌫️",
+        };
+        return icons[weather] || "🌤️";
+      }
 
-function getWeatherIcon(weather) {
-    const icons = { 'Clear': '☀️', 'Clouds': '☁️', 'Rain': '🌧️', 'Thunderstorm': '⛈️', 'Snow': '❄️', 'Mist': '🌫️' };
-    return icons[weather] || '🌤️';
-}
+      async function loadStation1() {
+        try {
+          const res = await fetch("/get-sensor");
+          const data = await res.json();
+          document.getElementById("espStatus").classList.add("connected");
+          document.getElementById("espStatusText").innerText =
+            "ESP: Đã kết nối";
 
-async function loadStation1() {
-    try {
-        const res = await fetch('/get-sensor');
-        const data = await res.json();
-        document.getElementById('espStatus').classList.add('connected');
-        document.getElementById('espStatusText').innerText = '✓ ESP: Kết nối';
+          // Hiển thị 5 cảm biến
+          document.getElementById("sensorTemp").innerText = Math.round(
+            data.temperature || 0
+          );
+          document.getElementById("sensorHumidity").innerText = Math.round(
+            data.humidity || 0
+          );
+          document.getElementById("sensorDust").innerText = (
+            data.dustDensity || 0
+          ).toFixed(1);
+          document.getElementById("sensorCO2").innerText = Math.round(
+            data.co2Level || 0
+          );
+          document.getElementById("sensorRain").innerText =
+            data.rainStatus === 0 ? "🌧️ MƯỚI" : "☀️ KHÔ";
 
-        // Hiển thị 5 cảm biến
-        document.getElementById('sensorTemp').innerText = Math.round(data.temperature || 0);
-        document.getElementById('sensorHumidity').innerText = Math.round(data.humidity || 0);
-        document.getElementById('sensorDust').innerText = (data.dustDensity || 0).toFixed(1);
-        document.getElementById('sensorCO2').innerText = Math.round(data.co2Level || 0);
-        document.getElementById('sensorRain').innerText = data.rainStatus === 0 ? '🌧️ MƯỚI' : '☀️ KHÔ';
+          // Xác định loại khí & chất lượng không khí từ MQ-135
+          const ppm = data.co2Level || 0;
+          let gasType = "";
+          let airQuality = "";
 
-        // Xác định loại khí & chất lượng không khí từ MQ-135
-        const ppm = data.co2Level || 0;
-        let gasType = '';
-        let airQuality = '';
-        
-        if (ppm < 300) {
-            gasType = 'NH3 (Ammoniac)';
-            airQuality = '✅ Tốt';
-        } else if (ppm < 500) {
-            gasType = 'CO (Carbon Monoxide)';
-            airQuality = '⚠️ Trung bình';
-        } else if (ppm < 800) {
-            gasType = 'NO2 (Nitrogen Dioxide)';
-            airQuality = '⚠️ Ô nhiễm';
-        } else {
-            gasType = 'CxHy (Hydrocarbons)';
-            airQuality = '🚨 Rất ô nhiễm';
-        }
-        
-        document.getElementById('gasType').innerText = gasType;
-        document.getElementById('airQuality').innerText = airQuality;
+          if (ppm < 300) {
+            gasType = "NH3 (Ammoniac)";
+            airQuality = "✅ Tốt";
+          } else if (ppm < 500) {
+            gasType = "CO (Carbon Monoxide)";
+            airQuality = "⚠️ Trung bình";
+          } else if (ppm < 800) {
+            gasType = "NO2 (Nitrogen Dioxide)";
+            airQuality = "⚠️ Ô nhiễm";
+          } else {
+            gasType = "CxHy (Hydrocarbons)";
+            airQuality = "🚨 Rất ô nhiễm";
+          }
 
-        // Hiển thị weather
-        document.getElementById('mainTemp').innerText = Math.round(data.temperature || 0);
-        document.getElementById('feelsLike').innerText = Math.round((data.temperature || 0) - 2);
-        document.getElementById('pressure').innerText = 1013;
-        document.getElementById('mainCondition').innerText = data.rainStatus === 0 ? 'Mưa' : 'Khô';
-        document.getElementById('weatherIcon').innerText = data.rainStatus === 0 ? '🌧️' : '☁️';
+          document.getElementById("gasType").innerText = gasType;
+          document.getElementById("airQuality").innerText = airQuality;
 
-        // Dự báo OpenWeather
-        const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=Da%20Nang&units=metric&appid=${API_KEY}&lang=vi`;
-        const forecastRes = await fetch(forecastUrl);
-        const forecastData = await forecastRes.json();
+          // Hiển thị weather
+          document.getElementById("mainTemp").innerText = Math.round(
+            data.temperature || 0
+          );
+          document.getElementById("feelsLike").innerText = Math.round(
+            (data.temperature || 0) - 2
+          );
+          document.getElementById("pressure").innerText = 1013;
+          document.getElementById("mainCondition").innerText =
+            data.rainStatus === 0 ? "Mưa" : "Khô";
+          document.getElementById("weatherIcon").innerText =
+            data.rainStatus === 0 ? "🌧️" : "☁️";
 
-        const grid = document.getElementById('forecastGrid');
-        grid.innerHTML = '';
-        const daily = {};
-        forecastData.list.forEach(item => {
-            const date = new Date(item.dt * 1000).toLocaleDateString('vi-VN');
+          // Dự báo OpenWeather
+          const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=Da%20Nang&units=metric&appid=${API_KEY}&lang=vi`;
+          const forecastRes = await fetch(forecastUrl);
+          const forecastData = await forecastRes.json();
+
+          const grid = document.getElementById("forecastGrid");
+          grid.innerHTML = "";
+          const daily = {};
+          forecastData.list.forEach((item) => {
+            const date = new Date(item.dt * 1000).toLocaleDateString("vi-VN");
             if (!daily[date]) daily[date] = item;
-        });
-        Object.keys(daily).slice(0, 4).forEach(date => {
-            const item = daily[date];
-            const card = document.createElement('div');
-            card.className = 'forecast-card';
-            card.innerHTML = `
+          });
+          Object.keys(daily)
+            .slice(0, 4)
+            .forEach((date) => {
+              const item = daily[date];
+              const card = document.createElement("div");
+              card.className = "forecast-card";
+              card.innerHTML = `
                 <div class="forecast-day">${date}</div>
-                <div class="forecast-icon">${getWeatherIcon(item.weather[0].main)}</div>
+                <div class="forecast-icon">${getWeatherIcon(
+                  item.weather[0].main
+                )}</div>
                 <div class="forecast-temp">${Math.round(item.main.temp)}°C</div>
-                <div class="forecast-info">${Math.round(item.main.temp_min)}° ~ ${Math.round(item.main.temp_max)}°</div>
+                <div class="forecast-info">${Math.round(
+                  item.main.temp_min
+                )}° ~ ${Math.round(item.main.temp_max)}°</div>
             `;
-            grid.appendChild(card);
-        });
+              grid.appendChild(card);
+            });
 
-        // Chart với dữ liệu chi tiết theo giờ
-        const chartData = [];
-        const chartLabels = [];
-        
-        forecastData.list.slice(0, 8).forEach(item => {
-            const time = new Date(item.dt * 1000).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+          // Chart với dữ liệu chi tiết theo giờ
+          const chartData = [];
+          const chartLabels = [];
+
+          forecastData.list.slice(0, 8).forEach((item) => {
+            const time = new Date(item.dt * 1000).toLocaleTimeString("vi-VN", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
             chartLabels.push(time);
             chartData.push(item.main.temp);
-        });
+          });
 
-        const ctx = document.getElementById('forecastChart').getContext('2d');
-        if (forecastChart) forecastChart.destroy();
-        forecastChart = new Chart(ctx, {
-            type: 'line',
+          const ctx = document.getElementById("forecastChart").getContext("2d");
+          if (forecastChart) forecastChart.destroy();
+          forecastChart = new Chart(ctx, {
+            type: "line",
             data: {
-                labels: chartLabels,
-                datasets: [
-                    { 
-                        label: 'Nhiệt độ (°C)', 
-                        data: chartData, 
-                        borderColor: '#f59e0b',
-                        backgroundColor: 'rgba(245, 158, 11, 0.2)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 6,
-                        pointBackgroundColor: '#f59e0b',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 2
-                    }
-                ]
+              labels: chartLabels,
+              datasets: [
+                {
+                  label: "Nhiệt độ (°C)",
+                  data: chartData,
+                  borderColor: "#f59e0b",
+                  backgroundColor: "rgba(245, 158, 11, 0.2)",
+                  borderWidth: 3,
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 6,
+                  pointBackgroundColor: "#f59e0b",
+                  pointBorderColor: "#fff",
+                  pointBorderWidth: 2,
+                },
+              ],
             },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
-                plugins: { 
-                    legend: { labels: { color: '#f8fafc' } },
-                    tooltip: {
-                        backgroundColor: 'rgba(0,0,0,0.7)',
-                        padding: 12,
-                        cornerRadius: 8,
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        callbacks: {
-                            label: function(context) {
-                                return context.parsed.y.toFixed(1) + '°C';
-                            }
-                        }
-                    }
-                }, 
-                scales: { 
-                    y: { 
-                        min: 15,
-                        max: 35,
-                        grid: { color: 'rgba(255,255,255,0.1)' }, 
-                        ticks: { color: '#f8fafc' } 
-                    }, 
-                    x: { 
-                        grid: { color: 'rgba(255,255,255,0.1)' }, 
-                        ticks: { color: '#f8fafc' } 
-                    } 
-                } 
-            }
-        });
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: "index", intersect: false },
+              plugins: {
+                legend: { labels: { color: "#f8fafc" } },
+                tooltip: {
+                  backgroundColor: "rgba(0,0,0,0.7)",
+                  padding: 12,
+                  cornerRadius: 8,
+                  titleColor: "#fff",
+                  bodyColor: "#fff",
+                  callbacks: {
+                    label: function (context) {
+                      return context.parsed.y.toFixed(1) + "°C";
+                    },
+                  },
+                },
+              },
+              scales: {
+                y: {
+                  min: 15,
+                  max: 35,
+                  grid: { color: "rgba(255,255,255,0.1)" },
+                  ticks: { color: "#f8fafc" },
+                },
+                x: {
+                  grid: { color: "rgba(255,255,255,0.1)" },
+                  ticks: { color: "#f8fafc" },
+                },
+              },
+            },
+          });
 
-        // Dự báo AI (không hiển thị, giữ để tính toán phía backend)
-        try {
-            const aiRes = await fetch('/forecast-ai');
+          // Dự báo AI (không hiển thị, giữ để tính toán phía backend)
+          try {
+            const aiRes = await fetch("/forecast-ai");
             const aiData = await aiRes.json();
             // Chỉ lấy dữ liệu, không hiển thị
+          } catch (e) {
+            console.log("Dự báo AI không cần");
+          }
         } catch (e) {
-            console.log('Dự báo AI không cần');
+          console.error("Lỗi:", e);
+          document.getElementById("espStatus").classList.remove("connected");
+          document.getElementById("espStatusText").innerText =
+            "✗ ESP: Mất kết nối";
         }
-    } catch (e) {
-        console.error('Lỗi:', e);
-        document.getElementById('espStatus').classList.remove('connected');
-        document.getElementById('espStatusText').innerText = '✗ ESP: Mất kết nối';
-    }
-}
+      }
 
-async function loadOtherLocation(city) {
-    try {
-        const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${API_KEY}&lang=vi`;
-        const res = await fetch(url);
-        const data = await res.json();
+      async function loadOtherLocation(city) {
+        try {
+          const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${API_KEY}&lang=vi`;
+          const res = await fetch(url);
+          const data = await res.json();
 
-        document.getElementById('otherLocationName').innerText = data.name;
-        document.getElementById('otherMainTemp').innerText = Math.round(data.main.temp);
-        document.getElementById('otherMainCondition').innerText = data.weather[0].description;
-        document.getElementById('otherWeatherIcon').innerText = getWeatherIcon(data.weather[0].main);
-        document.getElementById('otherHumidity').innerText = data.main.humidity;
-        document.getElementById('otherWind').innerText = data.wind.speed.toFixed(1);
-        document.getElementById('visibility').innerText = (data.visibility / 1000).toFixed(1);
-        document.getElementById('clouds').innerText = data.clouds.all;
+          document.getElementById("otherLocationName").innerText = data.name;
+          document.getElementById("otherMainTemp").innerText = Math.round(
+            data.main.temp
+          );
+          document.getElementById("otherMainCondition").innerText =
+            data.weather[0].description;
+          document.getElementById("otherWeatherIcon").innerText =
+            getWeatherIcon(data.weather[0].main);
+          document.getElementById("otherHumidity").innerText =
+            data.main.humidity;
+          document.getElementById("otherWind").innerText =
+            data.wind.speed.toFixed(1);
+          document.getElementById("visibility").innerText = (
+            data.visibility / 1000
+          ).toFixed(1);
+          document.getElementById("clouds").innerText = data.clouds.all;
 
-        // Forecast
-        const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&units=metric&appid=${API_KEY}&lang=vi`;
-        const forecastRes = await fetch(forecastUrl);
-        const forecastData = await forecastRes.json();
+          // Forecast
+          const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&units=metric&appid=${API_KEY}&lang=vi`;
+          const forecastRes = await fetch(forecastUrl);
+          const forecastData = await forecastRes.json();
 
-        const grid = document.getElementById('otherForecastGrid');
-        grid.innerHTML = '';
-        const daily = {};
-        forecastData.list.forEach(item => {
-            const date = new Date(item.dt * 1000).toLocaleDateString('vi-VN');
+          const grid = document.getElementById("otherForecastGrid");
+          grid.innerHTML = "";
+          const daily = {};
+          forecastData.list.forEach((item) => {
+            const date = new Date(item.dt * 1000).toLocaleDateString("vi-VN");
             if (!daily[date]) daily[date] = item;
-        });
-        Object.keys(daily).slice(0, 4).forEach(date => {
-            const item = daily[date];
-            const card = document.createElement('div');
-            card.className = 'forecast-card';
-            card.innerHTML = `
+          });
+          Object.keys(daily)
+            .slice(0, 4)
+            .forEach((date) => {
+              const item = daily[date];
+              const card = document.createElement("div");
+              card.className = "forecast-card";
+              card.innerHTML = `
                 <div class="forecast-day">${date}</div>
-                <div class="forecast-icon">${getWeatherIcon(item.weather[0].main)}</div>
+                <div class="forecast-icon">${getWeatherIcon(
+                  item.weather[0].main
+                )}</div>
                 <div class="forecast-temp">${Math.round(item.main.temp)}°C</div>
-                <div class="forecast-info">${Math.round(item.main.temp_min)}° ~ ${Math.round(item.main.temp_max)}°</div>
+                <div class="forecast-info">${Math.round(
+                  item.main.temp_min
+                )}° ~ ${Math.round(item.main.temp_max)}°</div>
             `;
-            grid.appendChild(card);
-        });
+              grid.appendChild(card);
+            });
 
-        // Chart với dữ liệu chi tiết theo giờ
-        const chartData = [];
-        const chartLabels = [];
-        
-        forecastData.list.slice(0, 8).forEach(item => {
-            const time = new Date(item.dt * 1000).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+          // Chart với dữ liệu chi tiết theo giờ
+          const chartData = [];
+          const chartLabels = [];
+
+          forecastData.list.slice(0, 8).forEach((item) => {
+            const time = new Date(item.dt * 1000).toLocaleTimeString("vi-VN", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
             chartLabels.push(time);
             chartData.push(item.main.temp);
-        });
+          });
 
-        const ctx = document.getElementById('otherForecastChart').getContext('2d');
-        if (forecastChart) forecastChart.destroy();
-        forecastChart = new Chart(ctx, {
-            type: 'line',
+          const ctx = document
+            .getElementById("otherForecastChart")
+            .getContext("2d");
+          if (forecastChart) forecastChart.destroy();
+          forecastChart = new Chart(ctx, {
+            type: "line",
             data: {
-                labels: chartLabels,
-                datasets: [
-                    { 
-                        label: 'Nhiệt độ (°C)', 
-                        data: chartData, 
-                        borderColor: '#f59e0b',
-                        backgroundColor: 'rgba(245, 158, 11, 0.2)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 6,
-                        pointBackgroundColor: '#f59e0b',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 2
-                    }
-                ]
+              labels: chartLabels,
+              datasets: [
+                {
+                  label: "Nhiệt độ (°C)",
+                  data: chartData,
+                  borderColor: "#f59e0b",
+                  backgroundColor: "rgba(245, 158, 11, 0.2)",
+                  borderWidth: 3,
+                  fill: true,
+                  tension: 0.4,
+                  pointRadius: 6,
+                  pointBackgroundColor: "#f59e0b",
+                  pointBorderColor: "#fff",
+                  pointBorderWidth: 2,
+                },
+              ],
             },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false,
-                interaction: { mode: 'index', intersect: false },
-                plugins: { 
-                    legend: { labels: { color: '#f8fafc' } },
-                    tooltip: {
-                        backgroundColor: 'rgba(0,0,0,0.7)',
-                        padding: 12,
-                        cornerRadius: 8,
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        callbacks: {
-                            label: function(context) {
-                                return context.parsed.y.toFixed(1) + '°C';
-                            }
-                        }
-                    }
-                }, 
-                scales: { 
-                    y: { 
-                        min: 15,
-                        max: 35,
-                        grid: { color: 'rgba(255,255,255,0.1)' }, 
-                        ticks: { color: '#f8fafc' } 
-                    }, 
-                    x: { 
-                        grid: { color: 'rgba(255,255,255,0.1)' }, 
-                        ticks: { color: '#f8fafc' } 
-                    } 
-                } 
-            }
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: { mode: "index", intersect: false },
+              plugins: {
+                legend: { labels: { color: "#f8fafc" } },
+                tooltip: {
+                  backgroundColor: "rgba(0,0,0,0.7)",
+                  padding: 12,
+                  cornerRadius: 8,
+                  titleColor: "#fff",
+                  bodyColor: "#fff",
+                  callbacks: {
+                    label: function (context) {
+                      return context.parsed.y.toFixed(1) + "°C";
+                    },
+                  },
+                },
+              },
+              scales: {
+                y: {
+                  min: 15,
+                  max: 35,
+                  grid: { color: "rgba(255,255,255,0.1)" },
+                  ticks: { color: "#f8fafc" },
+                },
+                x: {
+                  grid: { color: "rgba(255,255,255,0.1)" },
+                  ticks: { color: "#f8fafc" },
+                },
+              },
+            },
+          });
+        } catch (e) {
+          console.error("Lỗi:", e);
+        }
+      }
+
+      document
+        .getElementById("locationSelect")
+        .addEventListener("change", (e) => {
+          if (e.target.value === "station1") {
+            document.getElementById("station1Section").style.display = "block";
+            document.getElementById("otherLocationSection").style.display =
+              "none";
+            loadStation1();
+          } else {
+            document.getElementById("station1Section").style.display = "none";
+            document.getElementById("otherLocationSection").style.display =
+              "block";
+            loadOtherLocation(e.target.value);
+          }
         });
-    } catch (e) {
-        console.error('Lỗi:', e);
-    }
-}
 
-document.getElementById('locationSelect').addEventListener('change', (e) => {
-    if (e.target.value === 'station1') {
-        document.getElementById('station1Section').style.display = 'block';
-        document.getElementById('otherLocationSection').style.display = 'none';
-        loadStation1();
-    } else {
-        document.getElementById('station1Section').style.display = 'none';
-        document.getElementById('otherLocationSection').style.display = 'block';
-        loadOtherLocation(e.target.value);
-    }
-});
-
-loadStation1();
-setInterval(loadStation1, 10000);
-</script>
-
-</body>
+      loadStation1();
+      setInterval(loadStation1, 10000);
+    </script>
+  </body>
 </html>

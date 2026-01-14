@@ -106,5 +106,5 @@ function getRecommendation(temp, weather, rainChance) {
 // ======================== SERVER ========================
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () =>
-    console.log("🚀 Backend running on port", PORT)
+    console.log("running on http://localhost:" + PORT)
 );
