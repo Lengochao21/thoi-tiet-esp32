@@ -92,31 +92,85 @@
           opacity: 0.5;
         }
       }
-      .location-select {
+      .search-container {
+        position: relative;
+        width: 300px;
+        font-family: inherit;
+      }
+      .search-box {
+        display: flex;
+        align-items: center;
         background: rgba(59, 130, 246, 0.1);
         border: 1px solid rgba(59, 130, 246, 0.3);
-        color: white;
-        padding: 10px 15px;
         border-radius: 8px;
-        font-size: 0.9rem;
+        padding: 8px 12px;
         cursor: pointer;
+        transition: all 0.2s;
       }
-      .location-select option {
-        background: #1e293b;
-        color: white;
+      .search-box:hover {
+        background: rgba(59, 130, 246, 0.2);
       }
-      .search-input {
-        background: rgba(59, 130, 246, 0.1);
-        border: 1px solid rgba(59, 130, 246, 0.3);
-        color: white;
-        padding: 10px 15px;
-        border-radius: 8px;
+      .search-icon,
+      .arrow-icon {
+        color: var(--primary);
         font-size: 0.9rem;
-        width: 220px;
-        outline: none;
       }
-      .search-input::placeholder {
-        color: rgba(255, 255, 255, 0.55);
+      .search-input-custom {
+        background: transparent;
+        border: none;
+        color: white;
+        width: 100%;
+        outline: none;
+        font-size: 0.95rem;
+        margin: 0 10px;
+        font-family: inherit;
+      }
+      .search-input-custom::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+      }
+      .dropdown-list {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        width: 100%;
+        background: #1e293b;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 8px;
+        list-style: none;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+      }
+      .dropdown-list.show {
+        display: block;
+      }
+      .dropdown-item {
+        padding: 10px 15px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        color: #e2e8f0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: background 0.2s;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      .dropdown-item:last-child {
+        border-bottom: none;
+      }
+      .dropdown-item:hover {
+        background: rgba(59, 130, 246, 0.2);
+        color: white;
+      }
+      /* Custom Scrollbar */
+      .dropdown-list::-webkit-scrollbar {
+        width: 5px;
+      }
+      .dropdown-list::-webkit-scrollbar-thumb {
+        background: var(--primary);
+        border-radius: 3px;
       }
       .container {
         max-width: 1400px;
@@ -348,7 +402,7 @@
         .sensor-grid {
           grid-template-columns: repeat(2, 1fr);
         }
-        .search-input {
+        .search-container {
           width: 100%;
         }
       }
@@ -371,30 +425,22 @@
         </div>
       </div>
 
-      <!-- Search thành phố -->
-      <input
-        id="citySearch"
-        list="cityList"
-        class="search-input"
-        placeholder="Tìm thành phố (Enter)..."
-      />
-      <datalist id="cityList">
-        <option value="Da Nang"></option>
-        <option value="Hanoi"></option>
-        <option value="Ho Chi Minh"></option>
-        <option value="Hai Phong"></option>
-        <option value="Can Tho"></option>
-        <option value="Hue"></option>
-        <option value="Nha Trang"></option>
-      </datalist>
-
-      <select class="location-select" id="locationSelect">
-        <option value="station1">🔴 TRẠM 1 - KHU VỰC CHÍNH</option>
-        <option value="Da Nang">📍 Đà Nẵng</option>
-        <option value="Hanoi">Hà Nội</option>
-        <option value="Ho Chi Minh">TP. Hồ Chí Minh</option>
-        <option value="Hai Phong">Hải Phòng</option>
-      </select>
+      <div class="search-container">
+        <div class="search-box">
+          <i class="fas fa-search search-icon"></i>
+          <input
+            type="text"
+            id="searchInput"
+            class="search-input-custom"
+            placeholder="Tìm kiếm địa điểm..."
+            autocomplete="off"
+          />
+          <i class="fas fa-chevron-down arrow-icon"></i>
+        </div>
+        <ul class="dropdown-list" id="dropdownList">
+          <!-- JS sẽ render options -->
+        </ul>
+      </div>
     </div>
 
     <div class="container">
@@ -443,7 +489,11 @@
 
             <div class="sensor-box rain">
               <div class="sensor-label">🌧️ Trạng Thái Mưa</div>
-              <div class="sensor-value" id="sensorRain" style="font-size: 1.2rem">
+              <div
+                class="sensor-value"
+                id="sensorRain"
+                style="font-size: 1.2rem"
+              >
                 --
               </div>
               <div class="sensor-unit">Cảm biến LoRa</div>
@@ -522,7 +572,9 @@
             <div class="weather-stats">
               <div class="stat-item">
                 <div class="stat-label">Độ ẩm</div>
-                <div class="stat-value"><span id="otherHumidity">--</span>%</div>
+                <div class="stat-value">
+                  <span id="otherHumidity">--</span>%
+                </div>
               </div>
               <div class="stat-item">
                 <div class="stat-label">Gió</div>
@@ -558,7 +610,8 @@
         </div>
         <div class="detail-card">
           <div>
-            <i class="fas fa-cloud"></i><span class="detail-title">Độ Phủ Mây</span>
+            <i class="fas fa-cloud"></i
+            ><span class="detail-title">Độ Phủ Mây</span>
           </div>
           <div class="detail-value"><span id="clouds">--</span>%</div>
         </div>
@@ -569,6 +622,6 @@
       <div class="info">© 2026 Lê Ngọc Hảo, All rights reserved.</div>
     </div>
 
-    <script src="/app.js"></script>
+    <script src="/index.js"></script>
   </body>
 </html>

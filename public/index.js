@@ -28,7 +28,7 @@ function setEspStatus(online) {
     txt.innerText = "ESP: Đã kết nối";
   } else {
     dot.classList.remove("connected");
-    txt.innerText = "✗ ESP: Mất kết nối";
+    txt.innerText = "ESP: Mất kết nối";
   }
 }
 
@@ -163,6 +163,8 @@ async function loadStation1() {
     if (!res.ok) throw new Error("get-sensor error");
     const data = await res.json();
 
+    loadForecastFor("Da Nang", "forecastGrid", "forecastChart", stationChartRef);
+
     // ESP status chuẩn: dựa espOnline
     setEspStatus(!!data.espOnline);
 
@@ -211,14 +213,11 @@ async function loadStation1() {
     document.getElementById("uvDesc").innerText = uvText(uv);
 
     // Hero
-    document.getElementById("mainTemp").innerText = t.toFixed(1); // HTML đã có °C bên ngoài
+    document.getElementById("mainTemp").innerText = t.toFixed(1);
     document.getElementById("feelsLike").innerText = Math.round(t - 2);
     document.getElementById("pressure").innerText = 1013;
     document.getElementById("mainCondition").innerText = rain === 1 ? "Mưa" : "Khô";
     document.getElementById("weatherIcon").innerText = rain === 1 ? "🌧️" : "⛅";
-
-    // Forecast cho trạm 1 luôn lấy Đà Nẵng
-    await loadForecastFor("Da Nang", "forecastGrid", "forecastChart", stationChartRef);
   } catch (e) {
     console.error(e);
     setEspStatus(false);
@@ -278,30 +277,90 @@ function stopOtherPolling() {
   }
 }
 
-// Select change
-document.getElementById("locationSelect").addEventListener("change", (e) => {
-  if (e.target.value === "station1") {
+// ================== Search dropdown ==================
+const locations = [
+  { id: 'station1', name: '🔴 TRẠM 1 - KHU VỰC CHÍNH', type: 'station' },
+  { id: 'Da Nang', name: '📍 Đà Nẵng', type: 'city' },
+  { id: 'Hanoi', name: 'Hà Nội', type: 'city' },
+  { id: 'Ho Chi Minh', name: 'TP. Hồ Chí Minh', type: 'city' },
+  { id: 'Hue', name: 'Huế', type: 'city' },
+  { id: 'Nha Trang', name: 'Nha Trang', type: 'city' }
+];
+
+const searchInput = document.getElementById("searchInput");
+const dropdownList = document.getElementById("dropdownList");
+
+function renderDropdown(items) {
+  dropdownList.innerHTML = '';
+  if (items.length === 0) {
+    dropdownList.innerHTML = '<li class="dropdown-item" style="justify-content:center; color:rgba(255,255,255,0.4)">Không tìm thấy</li>';
+    return;
+  }
+
+  items.forEach(loc => {
+    const li = document.createElement("li");
+    li.className = "dropdown-item";
+    li.innerHTML = `
+      <i class="${loc.type === 'station' ? 'fas fa-broadcast-tower' : 'fas fa-map-marker-alt'}" style="color: ${loc.type === 'station' ? 'var(--danger)' : 'var(--primary)'}"></i>
+      <span>${loc.name}</span>
+    `;
+    li.onclick = () => selectLocation(loc);
+    dropdownList.appendChild(li);
+  });
+}
+
+function selectLocation(loc) {
+  searchInput.value = loc.name;
+  dropdownList.classList.remove('show');
+
+  if (loc.id === 'station1') {
     document.getElementById("station1Section").style.display = "block";
     document.getElementById("otherLocationSection").style.display = "none";
     startStationPolling();
   } else {
     document.getElementById("station1Section").style.display = "none";
     document.getElementById("otherLocationSection").style.display = "block";
-    startOtherPolling(e.target.value);
+    startOtherPolling(loc.id);
+  }
+}
+
+// Event Listeners
+searchInput.addEventListener("focus", () => {
+  renderDropdown(locations);
+  dropdownList.classList.add('show');
+});
+
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".search-container")) {
+    dropdownList.classList.remove('show');
   }
 });
 
-// Search Enter
-document.getElementById("citySearch").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    const city = e.target.value.trim();
-    if (!city) return;
+searchInput.addEventListener("input", (e) => {
+  const val = e.target.value.toLowerCase();
+  const filtered = locations.filter(l => l.name.toLowerCase().includes(val));
+  renderDropdown(filtered);
+  dropdownList.classList.add('show');
+});
 
-    document.getElementById("station1Section").style.display = "none";
-    document.getElementById("otherLocationSection").style.display = "block";
-    startOtherPolling(city);
+searchInput.addEventListener("keydown", (e) => {
+  if (e.key === 'Enter') {
+    const val = searchInput.value.trim();
+    if (val) {
+      dropdownList.classList.remove('show');
+      // Nếu tìm thấy trong list thì chọn, không thì coi như search thành phố lạ
+      const match = locations.find(l => l.name.toLowerCase() === val.toLowerCase());
+      if (match) {
+        selectLocation(match);
+      } else {
+        document.getElementById("station1Section").style.display = "none";
+        document.getElementById("otherLocationSection").style.display = "block";
+        startOtherPolling(val);
+      }
+    }
   }
 });
 
-// Start
+// Init Default
+searchInput.value = locations[0].name;
 startStationPolling();
