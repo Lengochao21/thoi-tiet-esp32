@@ -10,13 +10,13 @@ const otherChartRef = { current: null };
 function $(id) {
   return document.getElementById(id);
 }
-
 function setText(id, value) {
   const el = $(id);
   if (!el) return;
   el.innerText = value;
 }
 
+// ============== UI text ==============
 function getWeatherIcon(weather) {
   const icons = {
     Clear: "☀️",
@@ -54,29 +54,12 @@ function uvText(uv) {
   return "☠️ Cực nguy hiểm";
 }
 
-/**
- * AQI dạng số 0-500 (giống bạn đang dùng ở trạm 1)
- */
+// AQI kiểu 0-500 (dành cho ESP của bạn)
 function aqiText(aqi) {
   if (aqi <= 50) return "✅ Tốt";
   if (aqi <= 100) return "⚠️ Trung bình";
   if (aqi <= 150) return "⚠️ Kém";
   return "🚨 Xấu";
-}
-
-/**
- * AQI của OpenWeather air_pollution: main.aqi = 1..5
- * 1: Good, 2: Fair, 3: Moderate, 4: Poor, 5: Very Poor
- */
-function owmAqiText(aqi1to5) {
-  const map = {
-    1: "✅ Tốt",
-    2: "🟡 Khá",
-    3: "⚠️ Trung bình",
-    4: "🚨 Kém",
-    5: "☠️ Rất xấu",
-  };
-  return map[aqi1to5] || "—";
 }
 
 // ============== Chart ==============
@@ -141,7 +124,7 @@ function initOrUpdateChart(canvasId, chartRef, labels, data) {
   }
 }
 
-// ============== OpenWeather calls ==============
+// ============== Forecast (OpenWeather forecast vẫn dùng được) ==============
 async function loadForecastFor(city, gridId, chartCanvasId, chartRef) {
   const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(
     city
@@ -191,76 +174,6 @@ async function loadForecastFor(city, gridId, chartCanvasId, chartRef) {
   initOrUpdateChart(chartCanvasId, chartRef, chartLabels, chartData);
 }
 
-async function fetchOwmUvIndex(lat, lon) {
-  // UV Index (OpenWeather One Call 3.0) yêu cầu key có quyền One Call.
-  // Nếu key của bạn KHÔNG có One Call, request này sẽ fail.
-  // Mình xử lý fail an toàn: trả null.
-  const url = `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&exclude=minutely,hourly,daily,alerts&appid=${API_KEY}`;
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const json = await res.json();
-    const uvi = json?.current?.uvi;
-    return typeof uvi === "number" ? uvi : null;
-  } catch {
-    return null;
-  }
-}
-
-async function fetchOwmAirPollution(lat, lon) {
-  const url = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${API_KEY}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("air_pollution error");
-  return await res.json();
-}
-
-/**
- * Update UI for "Other location" UV + AQI + PM
- * - AQI: dùng air_pollution main.aqi (1..5)
- * - PM2.5/PM10: air_pollution components.pm2_5 / pm10
- * - UV: cố lấy từ OneCall UVI (nếu không có quyền thì hiển thị "—")
- */
-async function loadOtherAirUv(lat, lon) {
-  // AQI + PM
-  try {
-    const air = await fetchOwmAirPollution(lat, lon);
-    const aqi1to5 = air?.list?.[0]?.main?.aqi;
-    const comp = air?.list?.[0]?.components || {};
-    const pm25 = comp.pm2_5;
-    const pm10 = comp.pm10;
-
-    if (typeof aqi1to5 === "number") {
-      setText("otherAqiValue", String(aqi1to5)); // hoặc bạn muốn đổi sang thang 0-500 thì nói mình
-      setText("otherAqiText", owmAqiText(aqi1to5));
-    } else {
-      setText("otherAqiValue", "--");
-      setText("otherAqiText", "Không có dữ liệu");
-    }
-
-    if (typeof pm25 === "number" && typeof pm10 === "number") {
-      setText("otherPmText", `PM2.5: ${pm25.toFixed(1)} µg/m³ • PM10: ${pm10.toFixed(1)} µg/m³`);
-    } else {
-      setText("otherPmText", "PM2.5: -- µg/m³ • PM10: -- µg/m³");
-    }
-  } catch (e) {
-    console.error("air_pollution error:", e);
-    setText("otherAqiValue", "--");
-    setText("otherAqiText", "Lỗi AQI");
-    setText("otherPmText", "PM2.5: -- µg/m³ • PM10: -- µg/m³");
-  }
-
-  // UV
-  const uvi = await fetchOwmUvIndex(lat, lon);
-  if (typeof uvi === "number") {
-    setText("otherUvValue", uvi.toFixed(1));
-    setText("otherUvText", uvText(uvi));
-  } else {
-    // key không có OneCall vẫn không crash UI
-    setText("otherUvValue", "--");
-    setText("otherUvText", "Không có dữ liệu UV");
-  }
-}
-
 // ============== Station 1 (ESP) ==============
 async function loadStation1() {
   try {
@@ -270,7 +183,6 @@ async function loadStation1() {
 
     loadForecastFor("Da Nang", "forecastGrid", "forecastChart", stationChartRef);
 
-    // ESP status chuẩn: dựa espOnline
     setEspStatus(!!data.espOnline);
 
     if (!data.espOnline) {
@@ -292,7 +204,7 @@ async function loadStation1() {
     const t = Number(data.temperature || 0);
     const h = Number(data.humidity || 0);
     const dust = Number(data.dustDensity || 0);
-    const aqi = Number(data.co2Level || 0); // AQI nằm ở co2Level (theo code bạn)
+    const aqi = Number(data.co2Level || 0); // AQI của ESP nằm ở co2Level
     const uv = Number(data.uvIndex || 0);
     const rain = Number(data.rainStatus || 0);
 
@@ -300,22 +212,17 @@ async function loadStation1() {
     setText("sensorHumidity", String(Math.round(h)));
     setText("sensorDust", dust.toFixed(1));
 
-    // Hiển thị AQI (trạm)
     setText("sensorCO2", String(Math.round(aqi)));
     setText("airQuality", aqiText(aqi));
 
-    // Mưa/khô
     setText("sensorRain", rain === 1 ? "🌧️ MƯA" : "☀️ KHÔ");
 
-    // AQI box
     setText("aqiValue", String(Math.round(aqi)));
     setText("aqiBadge", aqiText(aqi));
 
-    // UV
     setText("uvIndex", uv.toFixed(1));
     setText("uvDesc", uvText(uv));
 
-    // Hero
     setText("mainTemp", t.toFixed(1));
     setText("feelsLike", String(Math.round(t - 2)));
     setText("pressure", "1013");
@@ -328,41 +235,61 @@ async function loadStation1() {
   }
 }
 
-// ============== Other location ==============
+// ============== Other location (CALL BACKEND METRICS) ==============
 async function loadOtherLocation(city) {
   try {
-    const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
-      city
-    )}&units=metric&appid=${API_KEY}&lang=vi`;
+    // ✅ gọi backend: UV (Open-Meteo) + AQI/PM (OpenWeather) + weather
+    const res = await fetch(`/api/metrics?city=${encodeURIComponent(city)}`);
+    const m = await res.json();
+    if (!res.ok || m.error) throw new Error(m.error || "metrics error");
 
-    const res = await fetch(url);
-    const data = await res.json();
+    setText("otherLocationName", m.city || city);
 
-    if (!data || !data.main) {
-      console.warn("City not found:", data);
-      return;
+    if (m.weather) {
+      setText("otherMainTemp", String(Math.round(m.weather.temp ?? 0)));
+      setText("otherMainCondition", m.weather.description || "—");
+      setText("otherWeatherIcon", getWeatherIcon(m.weather.main));
+
+      setText("otherHumidity", String(m.weather.humidity ?? "--"));
+      setText("otherWind", Number(m.weather.wind ?? 0).toFixed(1));
+
+      setText(
+        "visibility",
+        typeof m.weather.visibility === "number"
+          ? (m.weather.visibility / 1000).toFixed(1)
+          : "--"
+      );
+      setText("clouds", typeof m.weather.clouds === "number" ? String(m.weather.clouds) : "--");
     }
 
-    setText("otherLocationName", data.name || city);
-    setText("otherMainTemp", String(Math.round(data.main.temp)));
-    setText("otherMainCondition", data.weather?.[0]?.description || "—");
-    setText("otherWeatherIcon", getWeatherIcon(data.weather?.[0]?.main));
-    setText("otherHumidity", String(data.main.humidity));
-    setText("otherWind", Number(data.wind?.speed || 0).toFixed(1));
-
-    // (Các ô này nằm ngoài section other, nên vẫn cập nhật được)
-    if (typeof data.visibility === "number") {
-      setText("visibility", (data.visibility / 1000).toFixed(1));
-    }
-    setText("clouds", String(data.clouds?.all ?? "--"));
-
-    // ✅ NEW: Load UV + AQI/PM theo lat/lon cho địa điểm khác
-    const lat = data.coord?.lat;
-    const lon = data.coord?.lon;
-    if (typeof lat === "number" && typeof lon === "number") {
-      await loadOtherAirUv(lat, lon);
+    // UV (from backend - Open-Meteo)
+    if (typeof m.uv?.uvi === "number") {
+      setText("otherUvValue", m.uv.uvi.toFixed(1));
+      setText("otherUvText", m.uv.text || uvText(m.uv.uvi));
+    } else {
+      setText("otherUvValue", "--");
+      setText("otherUvText", "Không có dữ liệu UV");
     }
 
+    // AQI/PM (OpenWeather air_pollution)
+    if (typeof m.air?.aqi === "number") {
+      setText("otherAqiValue", String(m.air.aqi)); // 1..5
+      setText("otherAqiText", m.air.text || "—");
+    } else {
+      setText("otherAqiValue", "--");
+      setText("otherAqiText", "Không có dữ liệu AQI");
+    }
+
+    const pm25 = m.air?.pm2_5;
+    const pm10 = m.air?.pm10;
+    setText(
+      "otherPmText",
+      `PM2.5: ${typeof pm25 === "number" ? pm25.toFixed(1) : "--"} µg/m³ • PM10: ${
+        typeof pm10 === "number" ? pm10.toFixed(1) : "--"
+      } µg/m³`
+    );
+
+    // Forecast vẫn dùng OpenWeather forecast (không dính OneCall)
     await loadForecastFor(city, "otherForecastGrid", "otherForecastChart", otherChartRef);
   } catch (e) {
     console.error("Other city error:", e);
@@ -413,6 +340,7 @@ const dropdownList = document.getElementById("dropdownList");
 function renderDropdown(items) {
   if (!dropdownList) return;
   dropdownList.innerHTML = "";
+
   if (items.length === 0) {
     dropdownList.innerHTML =
       '<li class="dropdown-item" style="justify-content:center; color:rgba(255,255,255,0.4)">Không tìm thấy</li>';
@@ -442,21 +370,16 @@ function selectLocation(loc) {
   dropdownList.classList.remove("show");
 
   if (loc.id === "station1") {
-    const st = $("station1Section");
-    const oth = $("otherLocationSection");
-    if (st) st.style.display = "block";
-    if (oth) oth.style.display = "none";
+    if ($("station1Section")) $("station1Section").style.display = "block";
+    if ($("otherLocationSection")) $("otherLocationSection").style.display = "none";
     startStationPolling();
   } else {
-    const st = $("station1Section");
-    const oth = $("otherLocationSection");
-    if (st) st.style.display = "none";
-    if (oth) oth.style.display = "block";
+    if ($("station1Section")) $("station1Section").style.display = "none";
+    if ($("otherLocationSection")) $("otherLocationSection").style.display = "block";
     startOtherPolling(loc.id);
   }
 }
 
-// Event Listeners
 if (searchInput && dropdownList) {
   searchInput.addEventListener("focus", () => {
     renderDropdown(locations);
@@ -485,20 +408,18 @@ if (searchInput && dropdownList) {
         if (match) {
           selectLocation(match);
         } else {
-          const st = $("station1Section");
-          const oth = $("otherLocationSection");
-          if (st) st.style.display = "none";
-          if (oth) oth.style.display = "block";
+          if ($("station1Section")) $("station1Section").style.display = "none";
+          if ($("otherLocationSection")) $("otherLocationSection").style.display = "block";
           startOtherPolling(val);
         }
       }
     }
   });
 
-  // Init Default
+  // Init default
   searchInput.value = locations[0].name;
   startStationPolling();
 } else {
-  // Nếu HTML chưa có search input (trường hợp hiếm), vẫn chạy trạm 1
+  // fallback
   startStationPolling();
 }

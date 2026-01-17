@@ -11,16 +11,14 @@ const API_KEY =
   process.env.OPENWEATHER_API_KEY || "a216f02f9004f6fedecea80b73fc8632";
 const CITY = process.env.CITY || "Da Nang";
 
-const http = axios.create({
-  timeout: 10000,
-});
+const http = axios.create({ timeout: 10000 });
 
 let sensorData = {
   temperature: 0,
   humidity: 0,
   dustDensity: 0,
-  co2Level: 0, // ESP đang gửi AQI vào đây
-  rainStatus: 0, // 1 = MƯA, 0 = KHÔ
+  co2Level: 0,
+  rainStatus: 0,
   uvIndex: 0,
   lastUpdate: 0,
 };
@@ -31,7 +29,6 @@ async function withCache(key, ttlMs, fn) {
   const now = Date.now();
   const hit = cache.get(key);
   if (hit && now - hit.ts < ttlMs) return hit.data;
-
   const data = await fn();
   cache.set(key, { ts: now, data });
   return data;
@@ -46,7 +43,6 @@ function uvText(uvi) {
   return "☠️ Cực nguy hiểm";
 }
 
-// OpenWeather air_pollution main.aqi = 1..5
 function owmAqiText(aqi1to5) {
   const map = {
     1: "✅ Tốt",
@@ -61,13 +57,18 @@ function owmAqiText(aqi1to5) {
 // ================== ESP32 push ==================
 app.post("/update-sensor", (req, res) => {
   const b = req.body || {};
+
+  // ✅ chịu nhiều key UV để khỏi kẹt nếu ESP gửi khác tên
+  const uvRaw =
+    b.uvIndex ?? b.uv ?? b.uv_value ?? b.uvValue ?? sensorData.uvIndex ?? 0;
+
   sensorData = {
     temperature: Number(b.temperature ?? sensorData.temperature ?? 0),
     humidity: Number(b.humidity ?? sensorData.humidity ?? 0),
     dustDensity: Number(b.dustDensity ?? sensorData.dustDensity ?? 0),
     co2Level: Number(b.co2Level ?? sensorData.co2Level ?? 0),
     rainStatus: Number(b.rainStatus ?? sensorData.rainStatus ?? 0),
-    uvIndex: Number(b.uvIndex ?? sensorData.uvIndex ?? 0),
+    uvIndex: Number(uvRaw),
     lastUpdate: Date.now(),
   };
 
@@ -79,13 +80,9 @@ app.post("/update-sensor", (req, res) => {
 app.get("/get-sensor", (req, res) => {
   const now = Date.now();
   const ageMs = now - (sensorData.lastUpdate || 0);
-  const espOnline = !!sensorData.lastUpdate && ageMs <= 15000; // >15s coi như offline
+  const espOnline = !!sensorData.lastUpdate && ageMs <= 15000;
 
-  res.json({
-    ...sensorData,
-    espOnline,
-    ageMs,
-  });
+  res.json({ ...sensorData, espOnline, ageMs });
 });
 
 // ================== OpenWeather fetchers ==================
@@ -96,13 +93,9 @@ async function fetchWeatherByCity(city) {
 
   const r = await http.get(url);
   const d = r.data || {};
-
-  const lat = d?.coord?.lat;
-  const lon = d?.coord?.lon;
-
   return {
     name: d?.name || city,
-    coord: { lat, lon },
+    coord: { lat: d?.coord?.lat, lon: d?.coord?.lon },
     main: {
       temp: d?.main?.temp ?? null,
       humidity: d?.main?.humidity ?? null,
@@ -112,9 +105,7 @@ async function fetchWeatherByCity(city) {
       main: d?.weather?.[0]?.main ?? "Unknown",
       description: d?.weather?.[0]?.description ?? "",
     },
-    wind: {
-      speed: d?.wind?.speed ?? null,
-    },
+    wind: { speed: d?.wind?.speed ?? null },
     clouds: d?.clouds?.all ?? null,
     visibility: d?.visibility ?? null,
   };
@@ -123,33 +114,28 @@ async function fetchWeatherByCity(city) {
 async function fetchAirPollution(lat, lon) {
   const url = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${API_KEY}`;
   const r = await http.get(url);
-  const d = r.data || {};
-  const item = d?.list?.[0];
-
+  const item = r.data?.list?.[0];
   return {
     aqi: item?.main?.aqi ?? null, // 1..5
-    components: item?.components || null, // pm2_5, pm10, co, no2, o3, so2, nh3...
+    components: item?.components || null, // pm2_5, pm10...
   };
 }
 
-// One Call 3.0 (UVI) - có thể key bạn không có quyền => trả null
-async function fetchUvi(lat, lon) {
-  const url = `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&exclude=minutely,hourly,daily,alerts&appid=${API_KEY}`;
-  try {
-    const r = await http.get(url);
-    const uvi = r?.data?.current?.uvi;
-    return typeof uvi === "number" ? uvi : null;
-  } catch (e) {
-    return null;
-  }
+// ================== ✅ UV from Open-Meteo (no key) ==================
+async function fetchUvFromOpenMeteo(lat, lon) {
+  // Air Quality API current uv_index
+  const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=uv_index&timezone=Asia/Ho_Chi_Minh`;
+  const r = await http.get(url);
+  const uvi = r.data?.current?.uv_index;
+  return typeof uvi === "number" ? uvi : null;
 }
 
-// ================== NEW API: metrics for other locations ==================
 /**
  * GET /api/metrics?city=Da%20Nang
- * hoặc /api/metrics?lat=16.07&lon=108.22
+ * hoặc /api/metrics?lat=...&lon=...
  *
- * Trả về: weather + air (aqi, pm2_5, pm10...) + uv (uvi nếu có)
+ * - AQI/PM: OpenWeather air_pollution (giữ nguyên)
+ * - UV: Open-Meteo uv_index (không cần key)
  */
 app.get("/api/metrics", async (req, res) => {
   try {
@@ -159,7 +145,6 @@ app.get("/api/metrics", async (req, res) => {
 
     let weather = null;
 
-    // Nếu có city -> lấy coord từ /weather
     if (city) {
       weather = await withCache(
         `weather:${city.toLowerCase()}`,
@@ -169,30 +154,36 @@ app.get("/api/metrics", async (req, res) => {
       lat = weather?.coord?.lat;
       lon = weather?.coord?.lon;
     } else {
-      // Nếu không có city thì phải có lat/lon
       lat = typeof lat === "string" ? Number(lat) : lat;
       lon = typeof lon === "string" ? Number(lon) : lon;
     }
 
-    if (typeof lat !== "number" || typeof lon !== "number" || !isFinite(lat) || !isFinite(lon)) {
+    if (
+      typeof lat !== "number" ||
+      typeof lon !== "number" ||
+      !isFinite(lat) ||
+      !isFinite(lon)
+    ) {
       return res.status(400).json({
         error: "Missing/invalid params. Use ?city=... or ?lat=...&lon=...",
       });
     }
 
-    // Air + UV (cache nhẹ)
+    // ✅ AQI/PM: OpenWeather
     const air = await withCache(`air:${lat},${lon}`, 2 * 60 * 1000, () =>
       fetchAirPollution(lat, lon)
     );
 
-    const uvi = await withCache(`uvi:${lat},${lon}`, 5 * 60 * 1000, () =>
-      fetchUvi(lat, lon)
+    // ✅ UV: Open-Meteo (no key)
+    const uvi = await withCache(`uvmeteo:${lat},${lon}`, 5 * 60 * 1000, () =>
+      fetchUvFromOpenMeteo(lat, lon)
     );
 
-    // Nếu chưa fetch weather (trường hợp lat/lon) thì thôi, trả tối thiểu
-    const out = {
+    return res.json({
       city: weather?.name || (city || null),
       coord: { lat, lon },
+
+      // trả thêm weather để frontend tiện dùng (không bắt buộc)
       weather: weather
         ? {
             temp: weather.main.temp,
@@ -205,27 +196,26 @@ app.get("/api/metrics", async (req, res) => {
             visibility: weather.visibility,
           }
         : null,
+
       air: {
-        aqi: air?.aqi, // 1..5
+        aqi: air?.aqi ?? null, // 1..5
         text: air?.aqi ? owmAqiText(air.aqi) : null,
         pm2_5: air?.components?.pm2_5 ?? null,
         pm10: air?.components?.pm10 ?? null,
-        components: air?.components ?? null,
       },
+
       uv: {
-        uvi: uvi, // number | null
+        uvi: uvi, // number|null
         text: typeof uvi === "number" ? uvText(uvi) : null,
       },
-    };
-
-    return res.json(out);
+    });
   } catch (err) {
     console.error(err?.response?.data || err);
     return res.status(500).json({ error: "Metrics error" });
   }
 });
 
-// ================== Prediction (station 1) ==================
+// ================== Prediction (station 1) giữ nguyên ==================
 async function buildPrediction() {
   const ow = await http.get(
     `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
@@ -237,23 +227,6 @@ async function buildPrediction() {
   const humOW = ow.data?.main?.humidity ?? 0;
   const owMain = ow.data?.weather?.[0]?.main ?? "Unknown";
   const owDesc = ow.data?.weather?.[0]?.description ?? "";
-
-  const lat = ow.data?.coord?.lat;
-  const lon = ow.data?.coord?.lon;
-
-  // Lấy thêm AQI/PM của OpenWeather cho CITY (cache để đỡ spam)
-  let owAir = { aqi: null, text: null, pm2_5: null, pm10: null };
-  if (typeof lat === "number" && typeof lon === "number") {
-    const air = await withCache(`air:${lat},${lon}`, 2 * 60 * 1000, () =>
-      fetchAirPollution(lat, lon)
-    );
-    owAir = {
-      aqi: air?.aqi ?? null,
-      text: air?.aqi ? owmAqiText(air.aqi) : null,
-      pm2_5: air?.components?.pm2_5 ?? null,
-      pm10: air?.components?.pm10 ?? null,
-    };
-  }
 
   const tempESP = sensorData.temperature ?? 0;
   const humESP = sensorData.humidity ?? 0;
@@ -276,12 +249,8 @@ async function buildPrediction() {
       humidity: humOW,
       weather: owMain,
       description: owDesc,
-      air: owAir, // ✅ thêm AQI/PM của OpenWeather
     },
-    comparison: {
-      temperature: accuracyTemp,
-      humidity: accuracyHum,
-    },
+    comparison: { temperature: accuracyTemp, humidity: accuracyHum },
     predictionToday: {
       rainChance,
       recommendation,
@@ -299,7 +268,6 @@ app.get("/predict-station1", async (req, res) => {
   }
 });
 
-// Alias cho frontend cũ nếu còn gọi /forecast-ai
 app.get("/forecast-ai", async (req, res) => {
   try {
     res.json(await buildPrediction());
