@@ -287,6 +287,7 @@
         font-weight: 800;
         background: linear-gradient(135deg, #fff, var(--primary));
         background-clip: text;
+        -webkit-background-clip: text;
         color: transparent;
       }
       .weather-icon {
@@ -315,6 +316,14 @@
       .stat-value {
         font-size: 1.4rem;
         font-weight: 700;
+      }
+
+      /* ✅ THÊM (để hiện UV/AQI phụ đề đẹp) */
+      .stat-sub {
+        font-size: 0.85rem;
+        margin-top: 6px;
+        color: rgba(255, 255, 255, 0.6);
+        line-height: 1.2rem;
       }
 
       .forecast-grid {
@@ -404,6 +413,9 @@
         }
         .search-container {
           width: 100%;
+        }
+        .weather-stats {
+          grid-template-columns: 1fr;
         }
       }
     </style>
@@ -569,16 +581,31 @@
               <div class="condition" id="otherMainCondition">Đang tải...</div>
             </div>
 
+            <!-- ✅ FIX: THÊM UV + AQI/PM cho địa điểm khác -->
             <div class="weather-stats">
               <div class="stat-item">
                 <div class="stat-label">Độ ẩm</div>
-                <div class="stat-value">
-                  <span id="otherHumidity">--</span>%
-                </div>
+                <div class="stat-value"><span id="otherHumidity">--</span>%</div>
               </div>
+
               <div class="stat-item">
                 <div class="stat-label">Gió</div>
                 <div class="stat-value"><span id="otherWind">--</span> m/s</div>
+              </div>
+
+              <div class="stat-item">
+                <div class="stat-label">☀️ UV</div>
+                <div class="stat-value"><span id="otherUvValue">--</span></div>
+                <div class="stat-sub" id="otherUvText">Đang tải...</div>
+              </div>
+
+              <div class="stat-item">
+                <div class="stat-label">🌬️ Chất lượng không khí (AQI)</div>
+                <div class="stat-value"><span id="otherAqiValue">--</span></div>
+                <div class="stat-sub" id="otherAqiText">Đang tải...</div>
+                <div class="stat-sub" id="otherPmText">
+                  PM2.5: -- µg/m³ • PM10: -- µg/m³
+                </div>
               </div>
             </div>
           </div>
