@@ -164,7 +164,6 @@
         background: rgba(59, 130, 246, 0.2);
         color: white;
       }
-      /* Custom Scrollbar */
       .dropdown-list::-webkit-scrollbar {
         width: 5px;
       }
@@ -317,8 +316,6 @@
         font-size: 1.4rem;
         font-weight: 700;
       }
-
-      /* ✅ THÊM (để hiện UV/AQI phụ đề đẹp) */
       .stat-sub {
         font-size: 0.85rem;
         margin-top: 6px;
@@ -481,11 +478,11 @@
               <div class="sensor-unit">µg/m³</div>
             </div>
 
-            <!-- BỎ NH3, chỉ hiện AQI từ ESP -->
+            <!-- ✅ SỬA: không ghi LoRa nữa -->
             <div class="sensor-box co2">
               <div class="sensor-label">🔋 Chỉ số AQI</div>
               <div class="sensor-value" id="sensorCO2">--</div>
-              <div class="sensor-unit">AQI (ESP/LoRa)</div>
+              <div class="sensor-unit">Chỉ số AQI</div>
               <div
                 style="
                   font-size: 0.75rem;
@@ -499,6 +496,7 @@
               </div>
             </div>
 
+            <!-- ✅ SỬA: không ghi LoRa nữa -->
             <div class="sensor-box rain">
               <div class="sensor-label">🌧️ Trạng Thái Mưa</div>
               <div
@@ -508,7 +506,7 @@
               >
                 --
               </div>
-              <div class="sensor-unit">Cảm biến LoRa</div>
+              <div class="sensor-unit">Cảm biến mưa</div>
             </div>
 
             <div class="sensor-box aqi">
@@ -581,7 +579,6 @@
               <div class="condition" id="otherMainCondition">Đang tải...</div>
             </div>
 
-            <!-- ✅ FIX: THÊM UV + AQI/PM cho địa điểm khác -->
             <div class="weather-stats">
               <div class="stat-item">
                 <div class="stat-label">Độ ẩm</div>
