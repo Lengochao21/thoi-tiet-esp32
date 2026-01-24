@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
+const mongoose = require("mongoose"); // ✅ THÊM
 
 const app = express();
 app.use(cors());
@@ -12,6 +13,43 @@ const API_KEY =
 const CITY = process.env.CITY || "Da Nang";
 
 const http = axios.create({ timeout: 10000 });
+
+// ================== ✅ MongoDB: Schema + TTL 30 ngày ==================
+const SensorReadingSchema = new mongoose.Schema(
+  {
+    stationId: { type: String, default: "station1", index: true },
+    temperature: Number,
+    humidity: Number,
+    dustDensity: Number,
+    co2Level: Number,
+    rainStatus: Number,
+    uvIndex: Number,
+  },
+  { timestamps: true } // createdAt / updatedAt
+);
+
+// ✅ tự xoá sau 30 ngày
+SensorReadingSchema.index(
+  { createdAt: 1 },
+  { expireAfterSeconds: 60 * 60 * 24 * 30 }
+);
+// ✅ tối ưu query
+SensorReadingSchema.index({ stationId: 1, createdAt: -1 });
+
+const SensorReading = mongoose.model("SensorReading", SensorReadingSchema);
+
+// ================== ✅ Rule lưu lịch sử: 1 phút/lần + biến động lớn ==================
+let lastSavedAt = 0;
+let lastSavedSnapshot = null;
+
+// Ngưỡng “biến động lớn” (bạn có thể chỉnh lại cho hợp)
+const THRESH = {
+  temp: 0.8, // °C
+  hum: 4, // %
+  dust: 8, // µg/m³
+  aqi: 20, // co2Level (bạn đang dùng như AQI)
+  uv: 1.0, // UV
+};
 
 let sensorData = {
   temperature: 0,
@@ -72,6 +110,48 @@ app.post("/update-sensor", (req, res) => {
     lastUpdate: Date.now(),
   };
 
+  // ================== ✅ Lưu MongoDB theo rule ==================
+  const now = Date.now();
+  const dueByTime = now - lastSavedAt >= 60_000; // 1 phút
+
+  let dueBySpike = false;
+
+  if (lastSavedSnapshot) {
+    const dt = Math.abs(sensorData.temperature - lastSavedSnapshot.temperature);
+    const dh = Math.abs(sensorData.humidity - lastSavedSnapshot.humidity);
+    const dd = Math.abs(sensorData.dustDensity - lastSavedSnapshot.dustDensity);
+    const da = Math.abs(sensorData.co2Level - lastSavedSnapshot.co2Level);
+    const du = Math.abs(sensorData.uvIndex - lastSavedSnapshot.uvIndex);
+    const rainChanged = sensorData.rainStatus !== lastSavedSnapshot.rainStatus;
+
+    dueBySpike =
+      rainChanged ||
+      dt >= THRESH.temp ||
+      dh >= THRESH.hum ||
+      dd >= THRESH.dust ||
+      da >= THRESH.aqi ||
+      du >= THRESH.uv;
+  } else {
+    // lần đầu có data → lưu luôn
+    dueBySpike = true;
+  }
+
+  // chỉ lưu nếu DB đang connected
+  if ((dueByTime || dueBySpike) && mongoose.connection.readyState === 1) {
+    lastSavedAt = now;
+    lastSavedSnapshot = { ...sensorData };
+
+    SensorReading.create({
+      stationId: "station1",
+      temperature: sensorData.temperature,
+      humidity: sensorData.humidity,
+      dustDensity: sensorData.dustDensity,
+      co2Level: sensorData.co2Level,
+      rainStatus: sensorData.rainStatus,
+      uvIndex: sensorData.uvIndex,
+    }).catch((err) => console.error("❌ Mongo save error:", err.message));
+  }
+
   console.log("📡 ESP32:", sensorData);
   res.sendStatus(200);
 });
@@ -83,6 +163,48 @@ app.get("/get-sensor", (req, res) => {
   const espOnline = !!sensorData.lastUpdate && ageMs <= 15000;
 
   res.json({ ...sensorData, espOnline, ageMs });
+});
+
+// ================== ✅ API LỊCH SỬ ==================
+// GET /api/history?stationId=station1&limit=200
+// GET /api/history?from=2026-01-01&to=2026-01-02&limit=1000
+app.get("/api/history", async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      return res
+        .status(503)
+        .json({ ok: false, error: "MongoDB not connected" });
+    }
+
+    const stationId = req.query.stationId || "station1";
+    const limit = Math.min(parseInt(req.query.limit || "200", 10), 2000);
+
+    const from = req.query.from ? new Date(req.query.from) : null;
+    const to = req.query.to ? new Date(req.query.to) : null;
+
+    const filter = { stationId };
+    if (from || to) {
+      filter.createdAt = {};
+      if (from) filter.createdAt.$gte = from;
+      if (to) filter.createdAt.$lte = to;
+    }
+
+    const rows = await SensorReading.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    // trả về theo thứ tự cũ -> mới cho dễ vẽ chart
+    res.json({ ok: true, rows: rows.reverse() });
+  } catch (err) {
+    console.error("❌ history error:", err?.message || err);
+    res.status(500).json({ ok: false, error: "history error" });
+  }
+});
+
+// (tuỳ chọn) kiểm tra DB
+app.get("/db-ping", (req, res) => {
+  res.json({ ok: true, state: mongoose.connection.readyState }); // 1 = connected
 });
 
 // ================== OpenWeather fetchers ==================
@@ -307,7 +429,25 @@ function getRecommendation(temp, owMain, rainChance) {
   return "✅ Thời tiết ổn định";
 }
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, "0.0.0.0", () =>
-  console.log("running on http://localhost:" + PORT)
-);
+// ================== ✅ Connect MongoDB trước khi listen ==================
+async function start() {
+  const PORT = process.env.PORT || 3000;
+
+  if (!process.env.MONGO_URI) {
+    console.warn("⚠️ MONGO_URI chưa set -> vẫn chạy web nhưng không lưu lịch sử!");
+  } else {
+    await mongoose.connect(process.env.MONGO_URI, {
+      serverSelectionTimeoutMS: 10000,
+    });
+    console.log("✅ MongoDB connected!");
+  }
+
+  app.listen(PORT, "0.0.0.0", () =>
+    console.log("running on http://localhost:" + PORT)
+  );
+}
+
+start().catch((err) => {
+  console.error("❌ Startup error:", err?.message || err);
+  process.exit(1);
+});
