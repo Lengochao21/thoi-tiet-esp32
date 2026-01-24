@@ -1,8 +1,5 @@
 // /public/index.js
-// - Giữ forecast + station realtime + other city
-// - Lịch sử: mở modal (Lịch sử) -> 2 chart + bảng + phân trang
-// - Chuông: xin quyền + đăng ký push (gửi subscription lên backend)
-// - Chart tự đổi màu theo theme dựa trên body[data-theme]
+
 
 const API_KEY = "a216f02f9004f6fedecea80b73fc8632";
 
@@ -19,7 +16,7 @@ const historyDARRef = { current: null }; // dust + aqi + rain
 // history state
 let historyRange = "1d"; // default for modal
 let historyTimer = null;
-let historyRowsCache = [];
+let historyRowsCache = []; // bảng dùng cache này (DESC: mới -> cũ)
 let historyPage = 1;
 const HISTORY_PAGE_SIZE = 10;
 
@@ -100,22 +97,19 @@ function aqiText(aqi) {
   return "☠️ Nguy hại";
 }
 
-// PM2.5 theo thang bạn gửi (µg/m³)
+// ✅ PM2.5 theo yêu cầu của bạn:
+// <= 50: Thấp/Tốt, > 50: Không tốt
 function pm25Text(pm) {
-  if (pm <= 12.0) return "✅ Tốt";
-  if (pm <= 35.4) return "🟡 Trung bình";
-  if (pm <= 55.4) return "⚠️ Kém/Không tốt";
-  if (pm <= 150.4) return "🚨 Không tốt cho SK";
-  if (pm <= 250.4) return "☠️ Rất không tốt";
-  return "☠️ Nguy hại";
+  if (pm <= 50) return "✅ Thấp/Tốt";
+  return "⚠️ Không tốt";
 }
 
 function badgeHtml(text) {
   // trả về 1 badge gọn
-  // text đã có emoji đầu -> dùng màu đơn giản theo mức
   const t = String(text || "");
   let bg = "rgba(59,130,246,0.12)";
   let bd = "rgba(59,130,246,0.28)";
+
   if (t.includes("✅")) {
     bg = "rgba(16,185,129,0.18)";
     bd = "rgba(16,185,129,0.35)";
@@ -130,6 +124,15 @@ function badgeHtml(text) {
     bd = "rgba(239,68,68,0.32)";
   }
 
+  // bỏ emoji trong badge text
+  const clean = t
+    .replace("✅", "")
+    .replace("🟡", "")
+    .replace("⚠️", "")
+    .replace("🚨", "")
+    .replace("☠️", "")
+    .trim();
+
   return `<span style="
     display:inline-flex;
     align-items:center;
@@ -140,7 +143,7 @@ function badgeHtml(text) {
     font-size:0.78rem;
     border:1px solid ${bd};
     background:${bg};
-  ">${t.replace("✅", "").replace("🟡", "").replace("⚠️", "").replace("🚨", "").replace("☠️", "").trim()}</span>`;
+  ">${clean}</span>`;
 }
 
 // ============== Chart base (forecast) ==============
@@ -475,8 +478,7 @@ function rangeToQuery(range) {
   const from = new Date(fromMs).toISOString();
   const to = new Date(now).toISOString();
 
-  // limit: vẫn clamp để tránh nặng
-  // nếu rule lưu 1 phút/lần thì 1d ~1440, 3d ~4320, 7d ~10080
+  // limit: clamp tránh nặng
   let limit = 1500;
   if (range === "1d") limit = 1800;
   if (range === "3d") limit = 2500;
@@ -488,7 +490,6 @@ function rangeToQuery(range) {
 
 function applyChartThemeOptions(chart, tickColor, gridColor) {
   if (!chart) return;
-  // scales may differ
   const scales = chart.options?.scales || {};
   for (const k of Object.keys(scales)) {
     if (scales[k]?.ticks) scales[k].ticks.color = tickColor;
@@ -589,10 +590,9 @@ function initOrUpdateHistoryCharts(labels, tempArr, humArr, dustArr, aqiArr, rai
   if (c2) {
     const ctx2 = c2.getContext("2d");
 
-    // dynamic axis max
     const maxDust = Math.max(0, ...dustArr.map((x) => safeNum(x, 0)));
     const maxAqi = Math.max(0, ...aqiArr.map((x) => safeNum(x, 0)));
-    const yDustMax = Math.max(50, Math.ceil((maxDust * 1.25 + 5) / 5) * 5);
+    const yDustMax = Math.max(60, Math.ceil((maxDust * 1.25 + 5) / 5) * 5);
     const yAqiMax = Math.max(100, Math.ceil((maxAqi * 1.25 + 10) / 10) * 10);
 
     if (!historyDARRef.current) {
@@ -695,7 +695,6 @@ function initOrUpdateHistoryCharts(labels, tempArr, humArr, dustArr, aqiArr, rai
       historyDARRef.current.data.datasets[1].data = aqiArr;
       historyDARRef.current.data.datasets[2].data = rainArr;
 
-      // update dynamic axis max
       historyDARRef.current.options.scales.yDust.max = yDustMax;
       historyDARRef.current.options.scales.yAqi.max = yAqiMax;
 
@@ -716,7 +715,7 @@ function renderHistoryTable() {
 
   const start = (historyPage - 1) * HISTORY_PAGE_SIZE;
   const end = Math.min(total, start + HISTORY_PAGE_SIZE);
-  const pageRows = historyRowsCache.slice(start, end);
+  const pageRows = historyRowsCache.slice(start, end); // DESC: mới -> cũ
 
   if (info) info.innerText = `Trang ${historyPage} / ${totalPages} • Tổng ${total} mẫu`;
 
@@ -734,7 +733,7 @@ function renderHistoryTable() {
       const t = safeNum(r.temperature, 0);
       const h = safeNum(r.humidity, 0);
       const pm = safeNum(r.dustDensity, 0);
-      const aqi = safeNum(r.co2Level ?? r.aqi ?? r.airQuality ?? 0, 0); // linh hoạt
+      const aqi = safeNum(r.co2Level ?? r.aqi ?? r.airQuality ?? 0, 0);
       const uv = safeNum(r.uvIndex, 0);
       const rain = safeNum(r.rainStatus, 0) === 1 ? "Mưa" : "Khô";
 
@@ -770,20 +769,20 @@ async function loadHistory(range = historyRange) {
     historyRange = range;
     const { from, to, limit } = rangeToQuery(range);
 
-    // order=asc để chart vẽ đúng
+    // ✅ LẤY DESC để bảng mới nhất lên đầu
     const url = `/api/history?stationId=station1&from=${encodeURIComponent(
       from
-    )}&to=${encodeURIComponent(to)}&limit=${limit}&order=asc`;
+    )}&to=${encodeURIComponent(to)}&limit=${limit}&order=desc`;
 
     const res = await fetch(url);
     const json = await res.json();
     if (!res.ok || !json.ok) throw new Error(json.error || "history error");
 
-    const rows = json.rows || [];
-    historyRowsCache = rows;
+    const rowsDesc = json.rows || []; // mới -> cũ
+    historyRowsCache = rowsDesc;
     historyPage = 1;
 
-    if (rows.length === 0) {
+    if (rowsDesc.length === 0) {
       const note = $("historyNote");
       if (note) note.innerText = "Chưa có dữ liệu lịch sử. Hãy để ESP chạy vài phút rồi mở lại.";
       initOrUpdateHistoryCharts([], [], [], [], [], []);
@@ -791,20 +790,22 @@ async function loadHistory(range = historyRange) {
       return;
     }
 
-    // labels + arrays
-    const labels = rows.map((r) => fmtTime(r.createdAt || r.updatedAt || r._id));
-    const tempArr = rows.map((r) => safeNum(r.temperature, 0));
-    const humArr = rows.map((r) => safeNum(r.humidity, 0));
-    const dustArr = rows.map((r) => safeNum(r.dustDensity, 0));
-    const aqiArr = rows.map((r) => safeNum(r.co2Level ?? r.aqi ?? 0, 0));
-    const rainArr = rows.map((r) => (safeNum(r.rainStatus, 0) === 1 ? 1 : 0));
+    // ✅ chart cần ASC (cũ -> mới)
+    const rowsAsc = [...rowsDesc].reverse();
 
-    // note
+    const labels = rowsAsc.map((r) => fmtTime(r.createdAt || r.updatedAt || r._id));
+    const tempArr = rowsAsc.map((r) => safeNum(r.temperature, 0));
+    const humArr = rowsAsc.map((r) => safeNum(r.humidity, 0));
+    const dustArr = rowsAsc.map((r) => safeNum(r.dustDensity, 0));
+    const aqiArr = rowsAsc.map((r) => safeNum(r.co2Level ?? r.aqi ?? 0, 0));
+    const rainArr = rowsAsc.map((r) => (safeNum(r.rainStatus, 0) === 1 ? 1 : 0));
+
+    // note: “cập nhật gần nhất” là phần tử đầu (DESC)
     const note = $("historyNote");
     if (note) {
-      const last = rows[rows.length - 1];
-      const lastTime = new Date(last.createdAt || Date.now()).toLocaleString("vi-VN");
-      note.innerText = `Đang hiển thị ${rows.length} mẫu • cập nhật gần nhất: ${lastTime}`;
+      const newest = rowsDesc[0];
+      const newestTime = new Date(newest.createdAt || Date.now()).toLocaleString("vi-VN");
+      note.innerText = `Đang hiển thị ${rowsDesc.length} mẫu • cập nhật gần nhất: ${newestTime}`;
     }
 
     initOrUpdateHistoryCharts(labels, tempArr, humArr, dustArr, aqiArr, rainArr);
@@ -834,7 +835,6 @@ function bindHistoryRangeChips() {
 }
 
 function startHistoryPolling() {
-  // chỉ poll khi modal đang mở
   stopHistoryPolling();
   loadHistory(historyRange);
   historyTimer = setInterval(() => loadHistory(historyRange), 60000);
@@ -868,9 +868,7 @@ function bindHistoryModalLifecycle() {
   const close = $("historyClose");
   if (!modal) return;
 
-  // khi mở modal từ HTML sẽ gọi window.__openHistory()
   window.__openHistory = () => {
-    // set default chip active theo historyRange
     const wrap = $("historyRange");
     if (wrap) {
       wrap.querySelectorAll(".chip").forEach((b) => b.classList.remove("active"));
@@ -881,7 +879,6 @@ function bindHistoryModalLifecycle() {
   };
 
   function stopIfClosed() {
-    // modal đóng => stop poll
     if (!modal.classList.contains("show")) stopHistoryPolling();
   }
 
@@ -893,7 +890,6 @@ function bindHistoryModalLifecycle() {
     if (e.key === "Escape") stopIfClosed();
   });
 
-  // theo dõi class changes (trường hợp đóng từ HTML)
   const mo = new MutationObserver(() => stopIfClosed());
   mo.observe(modal, { attributes: true, attributeFilter: ["class"] });
 }
@@ -904,11 +900,9 @@ function bindThemeObserver() {
   if (!sw) return;
 
   sw.addEventListener("click", () => {
-    // forecast charts
     if (stationChartRef.current) stationChartRef.current.update();
     if (otherChartRef.current) otherChartRef.current.update();
 
-    // history charts: chỉ update theme, không cần gọi API
     const light = isLightTheme();
     const tickColor = light ? "#0f172a" : "#f8fafc";
     const gridColor = light ? "rgba(15,23,42,0.10)" : "rgba(255,255,255,0.10)";
@@ -920,91 +914,8 @@ function bindThemeObserver() {
   });
 }
 
-// ============== ✅ PUSH / CHUÔNG ==============
-async function registerServiceWorkerIfNeeded() {
-  if (!("serviceWorker" in navigator)) return null;
-  try {
-    const reg = await navigator.serviceWorker.register("/sw.js");
-    return reg;
-  } catch (e) {
-    console.error("SW register error:", e);
-    return null;
-  }
-}
-
-// Base64 -> Uint8Array
-function urlBase64ToUint8Array(base64String) {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const rawData = atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
-  return outputArray;
-}
-
-async function enableBell() {
-  const bellText = $("bellText");
-  const btn = $("bellBtn");
-
-  try {
-    const reg = await registerServiceWorkerIfNeeded();
-    if (!reg) throw new Error("Không đăng ký được Service Worker");
-
-    if (!("Notification" in window)) throw new Error("Trình duyệt không hỗ trợ Notification");
-
-    const perm = await Notification.requestPermission();
-    if (perm !== "granted") {
-      if (bellText) bellText.innerText = "Chuông (Tắt)";
-      return;
-    }
-
-    // lấy VAPID public key từ backend
-    const vkRes = await fetch("/api/push/vapidPublicKey");
-    const vkJson = await vkRes.json();
-    if (!vkRes.ok || !vkJson?.publicKey) throw new Error("Thiếu VAPID public key");
-
-    const publicKey = vkJson.publicKey;
-
-    let sub = await reg.pushManager.getSubscription();
-    if (!sub) {
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey),
-      });
-    }
-
-    // gửi subscription lên backend để lưu
-    const saveRes = await fetch("/api/push/subscribe", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ stationId: "station1", subscription: sub }),
-    });
-    const saveJson = await saveRes.json().catch(() => ({}));
-    if (!saveRes.ok || saveJson?.ok === false) {
-      throw new Error(saveJson?.error || "Không lưu được subscription");
-    }
-
-    if (btn) btn.classList.add("on");
-    if (bellText) bellText.innerText = "Chuông (Bật)";
-    // demo toast nhỏ
-    console.log("✅ Push enabled");
-  } catch (e) {
-    console.error("Bell enable error:", e);
-    if (bellText) bellText.innerText = "Chuông (Lỗi)";
-  }
-}
-
-function bindBell() {
-  const btn = $("bellBtn");
-  if (!btn) return;
-  btn.addEventListener("click", enableBell);
-}
-
 // ============== Init ==============
 (function main() {
-  // SW: đăng ký sớm (để bấm chuông nhanh)
-  registerServiceWorkerIfNeeded();
-
   // bind history
   bindHistoryRangeChips();
   bindHistoryPager();
@@ -1012,9 +923,6 @@ function bindBell() {
 
   // theme observer
   bindThemeObserver();
-
-  // bell
-  bindBell();
 
   // dropdown
   if (searchInput && dropdownList) {
@@ -1057,7 +965,6 @@ function bindBell() {
     searchInput.value = locations[0].name;
     startStationPolling();
   } else {
-    // fallback
     startStationPolling();
   }
 })();

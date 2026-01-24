@@ -2,11 +2,10 @@ const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
 const mongoose = require("mongoose");
-const webpush = require("web-push");
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: "300kb" })); // push sub hơi dài, tăng nhẹ
+app.use(express.json({ limit: "200kb" }));
 app.use(express.static("public"));
 
 const API_KEY =
@@ -114,269 +113,10 @@ function owmAqiText(aqi1to5) {
   return map[aqi1to5] || "—";
 }
 
-// ================== ✅ PUSH NOTIFICATION SETUP ==================
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "";
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:haongocle2131@gmail.com";
-
-// lưu subscription: ưu tiên MongoDB, fallback memory
-const memSubs = new Map(); // endpoint -> sub
-
-const PushSubSchema = new mongoose.Schema(
-  {
-    endpoint: { type: String, unique: true, index: true },
-    keys: {
-      p256dh: String,
-      auth: String,
-    },
-    createdAt: { type: Date, default: Date.now },
-    userAgent: String,
-  },
-  { versionKey: false }
-);
-// tự dọn sau 180 ngày cho nhẹ DB
-PushSubSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 180 });
-
-const PushSub = mongoose.model("PushSub", PushSubSchema);
-
-function pushReady() {
-  return !!(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY && VAPID_SUBJECT);
-}
-
-function initWebPush() {
-  if (!pushReady()) {
-    console.warn("⚠️ Push: thiếu VAPID env (PUBLIC/PRIVATE/SUBJECT) -> không gửi thông báo!");
-    return;
-  }
-  try {
-    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-    console.log("✅ web-push vapid set OK");
-  } catch (e) {
-    console.error("❌ web-push setVapidDetails error:", e?.message || e);
-  }
-}
-
-async function getAllSubs() {
-  if (isDbConnected()) {
-    const rows = await PushSub.find({}).lean();
-    return rows.map((r) => ({ endpoint: r.endpoint, keys: r.keys }));
-  }
-  // memory
-  return Array.from(memSubs.values());
-}
-
-async function saveSub(sub, userAgent = "") {
-  if (!sub?.endpoint || !sub?.keys?.p256dh || !sub?.keys?.auth) {
-    throw new Error("Invalid subscription format");
-  }
-  if (isDbConnected()) {
-    await PushSub.updateOne(
-      { endpoint: sub.endpoint },
-      {
-        $set: {
-          endpoint: sub.endpoint,
-          keys: sub.keys,
-          userAgent,
-          createdAt: new Date(),
-        },
-      },
-      { upsert: true }
-    );
-  } else {
-    memSubs.set(sub.endpoint, sub);
-  }
-}
-
-async function removeSub(endpoint) {
-  if (!endpoint) return;
-  if (isDbConnected()) {
-    await PushSub.deleteOne({ endpoint });
-  } else {
-    memSubs.delete(endpoint);
-  }
-}
-
-async function sendPushToAll(payloadObj) {
-  if (!pushReady()) return { ok: false, error: "Push not configured" };
-
-  const subs = await getAllSubs();
-  if (!subs.length) return { ok: false, error: "No subscribers yet" };
-
-  const payload = JSON.stringify(payloadObj);
-  let okCount = 0;
-  let failCount = 0;
-
-  for (const sub of subs) {
-    try {
-      await webpush.sendNotification(sub, payload);
-      okCount++;
-    } catch (e) {
-      failCount++;
-      const code = e?.statusCode;
-      // 404/410: subscription chết -> xoá
-      if (code === 404 || code === 410) {
-        await removeSub(sub.endpoint);
-      }
-      console.error("❌ push send error:", code, e?.body || e?.message || e);
-    }
-  }
-
-  return { ok: true, sent: okCount, failed: failCount };
-}
-
-// ========== PUSH ROUTES ==========
-app.get("/api/push/vapidPublicKey", (req, res) => {
-  if (!VAPID_PUBLIC_KEY) return res.status(500).json({ ok: false, error: "Missing VAPID_PUBLIC_KEY" });
-  res.json({ ok: true, publicKey: VAPID_PUBLIC_KEY });
-});
-
-app.post("/api/push/subscribe", async (req, res) => {
-  try {
-    if (!pushReady()) return res.status(500).json({ ok: false, error: "Push not configured" });
-
-    const sub = req.body;
-    const ua = req.headers["user-agent"] || "";
-    await saveSub(sub, ua);
-
-    return res.json({ ok: true });
-  } catch (e) {
-    console.error("❌ subscribe error:", e?.message || e);
-    return res.status(400).json({ ok: false, error: e?.message || "subscribe error" });
-  }
-});
-
-// Test route: hỗ trợ BOTH GET và POST để khỏi “Cannot GET”
-async function handlePushTest(req, res) {
-  try {
-    const result = await sendPushToAll({
-      title: "✅ Test thông báo",
-      body: "Nếu bạn thấy thông báo này thì chuông đã hoạt động!",
-      url: "/", // click về trang chính
-      ts: Date.now(),
-    });
-    if (!result.ok) return res.status(400).json(result);
-    return res.json(result);
-  } catch (e) {
-    console.error("❌ push test error:", e?.message || e);
-    return res.status(500).json({ ok: false, error: "push test error" });
-  }
-}
-app.get("/api/push/test", handlePushTest);
-app.post("/api/push/test", handlePushTest);
-
-// ================== ✅ ALERT NGƯỠNG (tự gửi khi vượt) ==================
-const ALERT_COOLDOWN_MS = toNum(process.env.ALERT_COOLDOWN_MS, 120000); // 2 phút / loại cảnh báo
-const lastAlertAt = new Map(); // key -> ts
-
-// Ngưỡng gợi ý (bạn có thể chỉnh lại)
-const LIMITS = {
-  TEMP_HIGH: toNum(process.env.LIMIT_TEMP_HIGH, 35),
-  UV_HIGH: toNum(process.env.LIMIT_UV_HIGH, 8),
-  PM25_HIGH: toNum(process.env.LIMIT_PM25_HIGH, 55.5), // theo bảng bạn gửi (xấu trở lên)
-  AQI_HIGH: toNum(process.env.LIMIT_AQI_HIGH, 150), // 0-500 kiểu AQI
-};
-
-function canAlert(key, now) {
-  const last = lastAlertAt.get(key) || 0;
-  if (now - last < ALERT_COOLDOWN_MS) return false;
-  lastAlertAt.set(key, now);
-  return true;
-}
-
-function pm25Level(pm) {
-  // bảng bạn gửi
-  if (pm <= 12) return { text: "✅ Tốt", level: "good" };
-  if (pm <= 35.4) return { text: "🟡 Trung bình", level: "moderate" };
-  if (pm <= 55.4) return { text: "⚠️ Kém/Không tốt", level: "unhealthy_sg" };
-  if (pm <= 150.4) return { text: "🚨 Không tốt cho sức khỏe", level: "unhealthy" };
-  if (pm <= 250.4) return { text: "☠️ Rất không tốt", level: "very_unhealthy" };
-  return { text: "☠️ Nguy hại", level: "hazardous" };
-}
-
-function aqiLevel(aqi) {
-  // aqi kiểu 0-500 (ESP co2Level)
-  if (aqi <= 50) return "✅ Tốt";
-  if (aqi <= 100) return "🟡 Trung bình";
-  if (aqi <= 150) return "⚠️ Kém/Không tốt";
-  if (aqi <= 200) return "🚨 Không tốt cho sức khỏe";
-  if (aqi <= 300) return "☠️ Rất không tốt";
-  return "☠️ Nguy hại";
-}
-
-async function maybeSendAlerts(prev, cur) {
-  if (!pushReady()) return;
-  const now = Date.now();
-
-  const t = Number(cur.temperature ?? 0);
-  const u = Number(cur.uvIndex ?? 0);
-  const pm = Number(cur.dustDensity ?? 0);
-  const aqi = Number(cur.co2Level ?? 0);
-  const rain = Number(cur.rainStatus ?? 0);
-
-  // 1) Mưa: chỉ alert khi chuyển trạng thái
-  if (prev && rain !== Number(prev.rainStatus ?? 0)) {
-    if (canAlert("RAIN_CHANGE", now)) {
-      await sendPushToAll({
-        title: rain === 1 ? "🌧️ Phát hiện có mưa" : "☀️ Hết mưa",
-        body: rain === 1 ? "Trạm 1 vừa phát hiện mưa." : "Trạm 1 ghi nhận đã hết mưa.",
-        url: "/",
-        type: "rain",
-        ts: now,
-      });
-    }
-  }
-
-  // 2) Nhiệt độ cao
-  if (t >= LIMITS.TEMP_HIGH && canAlert("TEMP_HIGH", now)) {
-    await sendPushToAll({
-      title: "🔥 Cảnh báo nhiệt độ cao",
-      body: `Nhiệt độ hiện tại: ${t.toFixed(1)}°C (ngưỡng ${LIMITS.TEMP_HIGH}°C)`,
-      url: "/",
-      type: "temp",
-      ts: now,
-    });
-  }
-
-  // 3) UV cao
-  if (u >= LIMITS.UV_HIGH && canAlert("UV_HIGH", now)) {
-    await sendPushToAll({
-      title: "☀️ Cảnh báo UV cao",
-      body: `UV hiện tại: ${u.toFixed(1)} • ${uvText(u)} (ngưỡng ${LIMITS.UV_HIGH})`,
-      url: "/",
-      type: "uv",
-      ts: now,
-    });
-  }
-
-  // 4) PM2.5 cao
-  if (pm >= LIMITS.PM25_HIGH && canAlert("PM25_HIGH", now)) {
-    const lv = pm25Level(pm);
-    await sendPushToAll({
-      title: "🌫️ Cảnh báo bụi mịn PM2.5",
-      body: `PM2.5: ${pm.toFixed(1)} µg/m³ • ${lv.text}`,
-      url: "/",
-      type: "pm25",
-      ts: now,
-    });
-  }
-
-  // 5) AQI cao (0-500)
-  if (aqi >= LIMITS.AQI_HIGH && canAlert("AQI_HIGH", now)) {
-    await sendPushToAll({
-      title: "🌬️ Cảnh báo AQI cao",
-      body: `AQI: ${Math.round(aqi)} • ${aqiLevel(aqi)} (ngưỡng ${LIMITS.AQI_HIGH})`,
-      url: "/",
-      type: "aqi",
-      ts: now,
-    });
-  }
-}
-
 // ================== ESP32 push ==================
 app.post("/update-sensor", async (req, res) => {
   try {
     const b = req.body || {};
-    const prev = { ...sensorData }; // để detect change
 
     const uvRaw =
       b.uvIndex ?? b.uv ?? b.uv_value ?? b.uvValue ?? sensorData.uvIndex ?? 0;
@@ -391,7 +131,7 @@ app.post("/update-sensor", async (req, res) => {
       lastUpdate: Date.now(),
     };
 
-    // ================== Lưu MongoDB theo rule ==================
+    // ===== Lưu MongoDB theo rule =====
     const now = Date.now();
     const dueByTime = now - lastSavedAt >= HISTORY_MIN_INTERVAL_MS;
 
@@ -435,11 +175,6 @@ app.post("/update-sensor", async (req, res) => {
       }
     }
 
-    // ✅ gửi cảnh báo nếu vượt ngưỡng
-    maybeSendAlerts(prev, sensorData).catch((e) =>
-      console.error("❌ alert error:", e?.message || e)
-    );
-
     console.log("📡 ESP32:", sensorData);
     return res.sendStatus(200);
   } catch (e) {
@@ -466,7 +201,8 @@ app.get("/api/history", async (req, res) => {
     const stationId = req.query.stationId || "station1";
     const limit = Math.min(parseInt(req.query.limit || "200", 10), 3000);
 
-    const order = String(req.query.order || "asc").toLowerCase();
+    // ✅ default desc để ưu tiên mới nhất
+    const order = String(req.query.order || "desc").toLowerCase();
 
     const from = req.query.from ? new Date(req.query.from) : null;
     const to = req.query.to ? new Date(req.query.to) : null;
@@ -712,9 +448,6 @@ function getRecommendation(temp, owMain, rainChance) {
 // ================== Connect MongoDB trước khi listen ==================
 async function start() {
   const PORT = process.env.PORT || 3000;
-
-  // init web push (phải gọi trước)
-  initWebPush();
 
   if (!process.env.MONGO_URI) {
     console.warn("⚠️ MONGO_URI chưa set -> vẫn chạy web nhưng KHÔNG lưu lịch sử!");
