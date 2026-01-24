@@ -34,7 +34,6 @@
         --shadow: rgba(0, 0, 0, 0.45);
       }
 
-      /* Light theme overrides */
       body[data-theme="light"] {
         --bg0: #f3f6ff;
         --bg1: #ffffff;
@@ -52,7 +51,6 @@
         padding: 0;
         box-sizing: border-box;
       }
-
       body {
         font-family: "Inter", sans-serif;
         background: linear-gradient(180deg, var(--bg0) 0%, var(--bg1) 100%);
@@ -84,7 +82,6 @@
         align-items: center;
         gap: 12px;
         flex-wrap: wrap;
-        min-width: 280px;
       }
 
       .logo {
@@ -96,33 +93,38 @@
         font-size: 1.9rem;
         color: var(--primary);
       }
+      .logo-text h1 {
+        font-size: 0.95rem;
+        font-weight: 900;
+        letter-spacing: 0.2px;
+      }
 
-      /* ✅ Updated title block */
-      .logo-text {
+      /* ✅ Intro lines */
+      .intro-lines {
         display: flex;
         flex-direction: column;
         gap: 2px;
+        line-height: 1.2;
+        max-width: 640px;
       }
-      .uni-title {
-        font-size: 0.98rem;
+      .uni {
         font-weight: 900;
         color: var(--primary);
+        font-size: 0.92rem;
         letter-spacing: 0.2px;
-        line-height: 1.05rem;
+        text-transform: uppercase;
       }
-      .grad-title {
-        font-size: 0.82rem;
+      .thesis {
         font-weight: 900;
+        font-size: 0.9rem;
         color: var(--text);
-        opacity: 0.92;
-        line-height: 1.05rem;
+        text-transform: uppercase;
       }
-      .topic-title {
-        max-width: 560px;
-        font-size: 0.78rem;
+      .topic {
         font-weight: 800;
+        font-size: 0.82rem;
         color: var(--muted);
-        line-height: 1.15rem;
+        text-transform: uppercase;
       }
 
       .right-wrap {
@@ -146,11 +148,12 @@
         border: 1px solid rgba(59, 130, 246, 0.28);
         border-radius: 10px;
         font-size: 0.82rem;
-        font-weight: 700;
+        font-weight: 800;
       }
       body[data-theme="light"] .status-item {
         background: rgba(59, 130, 246, 0.08);
       }
+
       .status-dot {
         width: 9px;
         height: 9px;
@@ -169,6 +172,85 @@
         50% {
           opacity: 0.55;
         }
+      }
+
+      /* Controls group */
+      .control-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 12px;
+        background: rgba(59, 130, 246, 0.12);
+        border: 1px solid rgba(59, 130, 246, 0.28);
+        border-radius: 12px;
+        cursor: pointer;
+        user-select: none;
+        font-weight: 900;
+        font-size: 0.82rem;
+        color: var(--text);
+        transition: 0.18s;
+      }
+      body[data-theme="light"] .control-btn {
+        background: rgba(59, 130, 246, 0.08);
+      }
+      .control-btn:hover {
+        background: rgba(59, 130, 246, 0.18);
+        transform: translateY(-1px);
+      }
+      .control-btn i {
+        color: var(--primary);
+      }
+
+      /* iOS-like theme toggle */
+      .theme-toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 10px;
+        background: rgba(59, 130, 246, 0.12);
+        border: 1px solid rgba(59, 130, 246, 0.28);
+        border-radius: 12px;
+        user-select: none;
+      }
+      .theme-toggle .label {
+        font-size: 0.82rem;
+        font-weight: 900;
+        color: var(--text);
+        opacity: 0.9;
+        white-space: nowrap;
+      }
+      .switch {
+        position: relative;
+        width: 48px;
+        height: 28px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        cursor: pointer;
+        transition: 0.2s;
+      }
+      body[data-theme="light"] .switch {
+        background: rgba(15, 23, 42, 0.08);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+      }
+      .knob {
+        position: absolute;
+        top: 50%;
+        left: 3px;
+        width: 22px;
+        height: 22px;
+        border-radius: 999px;
+        transform: translateY(-50%);
+        background: #fff;
+        box-shadow: 0 10px 18px -10px rgba(0, 0, 0, 0.6);
+        transition: 0.2s;
+      }
+      .switch.on {
+        background: rgba(16, 185, 129, 0.35);
+        border-color: rgba(16, 185, 129, 0.35);
+      }
+      .switch.on .knob {
+        left: 23px;
       }
 
       /* Search */
@@ -203,7 +285,7 @@
         font-size: 0.95rem;
         margin: 0 10px;
         font-family: inherit;
-        font-weight: 600;
+        font-weight: 700;
       }
       .search-input-custom::placeholder {
         color: var(--muted2);
@@ -250,89 +332,6 @@
       .dropdown-item:hover {
         background: rgba(59, 130, 246, 0.16);
       }
-      .dropdown-list::-webkit-scrollbar {
-        width: 6px;
-      }
-      .dropdown-list::-webkit-scrollbar-thumb {
-        background: rgba(59, 130, 246, 0.8);
-        border-radius: 10px;
-      }
-
-      /* iOS-like theme toggle */
-      .theme-toggle {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 7px 10px;
-        background: rgba(59, 130, 246, 0.12);
-        border: 1px solid rgba(59, 130, 246, 0.28);
-        border-radius: 12px;
-        user-select: none;
-      }
-      .theme-toggle .label {
-        font-size: 0.82rem;
-        font-weight: 800;
-        color: var(--text);
-        opacity: 0.9;
-        white-space: nowrap;
-      }
-      .switch {
-        position: relative;
-        width: 48px;
-        height: 28px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.18);
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        cursor: pointer;
-        transition: 0.2s;
-      }
-      body[data-theme="light"] .switch {
-        background: rgba(15, 23, 42, 0.08);
-        border: 1px solid rgba(15, 23, 42, 0.08);
-      }
-      .knob {
-        position: absolute;
-        top: 50%;
-        left: 3px;
-        width: 22px;
-        height: 22px;
-        border-radius: 999px;
-        transform: translateY(-50%);
-        background: #fff;
-        box-shadow: 0 10px 18px -10px rgba(0, 0, 0, 0.6);
-        transition: 0.2s;
-      }
-      .switch.on {
-        background: rgba(16, 185, 129, 0.35);
-        border-color: rgba(16, 185, 129, 0.35);
-      }
-      .switch.on .knob {
-        left: 23px;
-      }
-
-      /* ✅ Quick history button */
-      .quick-btn {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        border-radius: 12px;
-        border: 1px solid rgba(59, 130, 246, 0.28);
-        background: rgba(59, 130, 246, 0.12);
-        color: var(--text);
-        font-weight: 900;
-        cursor: pointer;
-      }
-      body[data-theme="light"] .quick-btn {
-        background: rgba(59, 130, 246, 0.08);
-      }
-      .quick-btn:hover {
-        background: rgba(59, 130, 246, 0.18);
-        transform: translateY(-1px);
-      }
-      .quick-btn i {
-        color: var(--primary);
-      }
 
       /* Layout */
       .container {
@@ -341,7 +340,6 @@
         padding: 26px;
       }
 
-      /* Section title */
       .section-title {
         font-size: 1.05rem;
         font-weight: 900;
@@ -368,10 +366,10 @@
         box-shadow: 0 16px 26px -18px var(--shadow);
       }
 
-      /* ✅ 4 columns desktop => 4 + 3 */
+      /* ✅ 7 ô: desktop sẽ ra 4 ô hàng 1 + 3 ô hàng 2 */
       .sensor-grid {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(180px, 1fr));
         gap: 14px;
       }
 
@@ -407,11 +405,12 @@
       .sensor-box.uv {
         border-left-color: #f97316;
       }
+
       .sensor-label {
         font-size: 0.82rem;
         color: var(--muted);
         margin-bottom: 6px;
-        font-weight: 700;
+        font-weight: 800;
       }
       .sensor-value {
         font-size: 1.85rem;
@@ -422,7 +421,7 @@
         font-size: 0.75rem;
         color: var(--muted2);
         margin-top: 4px;
-        font-weight: 700;
+        font-weight: 800;
       }
 
       /* Hero weather */
@@ -451,7 +450,6 @@
         margin-bottom: 10px;
         color: #fff;
       }
-
       .location-title h2 {
         font-size: 1.85rem;
         font-weight: 900;
@@ -519,13 +517,6 @@
         font-weight: 900;
         color: var(--text);
       }
-      .stat-sub {
-        font-size: 0.88rem;
-        margin-top: 6px;
-        color: var(--muted2);
-        line-height: 1.2rem;
-        font-weight: 700;
-      }
 
       /* Forecast */
       .forecast-section {
@@ -577,7 +568,6 @@
         margin-top: 6px;
         font-weight: 800;
       }
-
       .chart-container {
         background: var(--card);
         padding: 16px;
@@ -590,178 +580,7 @@
         border: 1px solid rgba(15, 23, 42, 0.08);
       }
 
-      /* History block */
-      .history-block {
-        margin-top: 22px;
-        background: linear-gradient(
-          135deg,
-          rgba(59, 130, 246, 0.14),
-          rgba(16, 185, 129, 0.12)
-        );
-        border: 1px solid var(--border);
-        border-radius: 22px;
-        padding: 18px;
-        box-shadow: 0 18px 30px -18px var(--shadow);
-      }
-
-      .history-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        flex-wrap: wrap;
-        margin-bottom: 12px;
-      }
-
-      .history-actions {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-wrap: wrap;
-      }
-
-      .chip-group {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-      .chip {
-        border: 1px solid rgba(59, 130, 246, 0.28);
-        background: rgba(59, 130, 246, 0.12);
-        color: var(--text);
-        padding: 8px 12px;
-        border-radius: 999px;
-        font-size: 0.85rem;
-        font-weight: 900;
-        cursor: pointer;
-        transition: 0.18s;
-      }
-      body[data-theme="light"] .chip {
-        background: rgba(59, 130, 246, 0.08);
-      }
-      .chip:hover {
-        transform: translateY(-1px);
-        background: rgba(59, 130, 246, 0.18);
-      }
-      .chip.active {
-        background: rgba(16, 185, 129, 0.25);
-        border-color: rgba(16, 185, 129, 0.35);
-      }
-
-      .history-note {
-        font-size: 0.86rem;
-        color: var(--muted);
-        font-weight: 700;
-      }
-
-      .history-grid {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 12px;
-      }
-
-      .history-card {
-        background: var(--card);
-        border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        padding: 14px;
-        min-height: 300px;
-      }
-      body[data-theme="light"] .history-card {
-        border: 1px solid rgba(15, 23, 42, 0.08);
-      }
-
-      .history-card .card-title {
-        font-size: 0.95rem;
-        font-weight: 900;
-        margin-bottom: 10px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: var(--text);
-      }
-      .history-card .card-title i {
-        color: var(--primary);
-      }
-      .history-card .sub {
-        font-size: 0.82rem;
-        color: var(--muted2);
-        margin-top: -4px;
-        margin-bottom: 8px;
-        font-weight: 700;
-      }
-
-      .history-chart {
-        height: 230px;
-      }
-      .history-chart canvas {
-        width: 100% !important;
-        height: 100% !important;
-      }
-
-      /* ✅ HISTORY TABLE */
-      .history-table-wrap {
-        overflow: auto;
-        border-radius: 14px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-      }
-      body[data-theme="light"] .history-table-wrap {
-        border: 1px solid rgba(15, 23, 42, 0.08);
-      }
-      .history-table {
-        width: 100%;
-        border-collapse: collapse;
-        min-width: 760px; /* mobile will scroll */
-        background: var(--card);
-      }
-      .history-table th,
-      .history-table td {
-        padding: 10px 12px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        font-weight: 800;
-        text-align: center;
-        white-space: nowrap;
-      }
-      body[data-theme="light"] .history-table th,
-      body[data-theme="light"] .history-table td {
-        border-bottom: 1px solid rgba(15, 23, 42, 0.06);
-      }
-      .history-table th {
-        position: sticky;
-        top: 0;
-        background: rgba(30, 41, 59, 0.92);
-        color: var(--text);
-        z-index: 2;
-      }
-      body[data-theme="light"] .history-table th {
-        background: rgba(255, 255, 255, 0.92);
-      }
-      .badge {
-        display: inline-block;
-        padding: 4px 10px;
-        border-radius: 999px;
-        font-size: 0.78rem;
-        font-weight: 900;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        margin-left: 6px;
-      }
-      body[data-theme="light"] .badge {
-        border: 1px solid rgba(15, 23, 42, 0.12);
-      }
-      .badge.good {
-        background: rgba(16, 185, 129, 0.18);
-      }
-      .badge.mid {
-        background: rgba(245, 158, 11, 0.18);
-      }
-      .badge.bad {
-        background: rgba(239, 68, 68, 0.18);
-      }
-      .badge.gray {
-        background: rgba(148, 163, 184, 0.18);
-      }
-
-      /* Details grid bottom */
+      /* Other section + bottom cards */
       .detail-grid {
         margin-top: 18px;
         display: grid;
@@ -796,7 +615,6 @@
         color: var(--text);
       }
 
-      /* Footer */
       .footer {
         text-align: center;
         padding: 26px 14px;
@@ -810,7 +628,214 @@
         line-height: 1.55rem;
       }
 
+      /* ✅ History Modal (màn hình riêng) */
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        padding: 16px;
+      }
+      body[data-theme="light"] .modal-backdrop {
+        background: rgba(15, 23, 42, 0.35);
+      }
+      .modal-backdrop.show {
+        display: flex;
+      }
+      .modal {
+        width: min(1150px, 100%);
+        max-height: 92vh;
+        overflow: hidden;
+        border-radius: 18px;
+        background: var(--bg1);
+        border: 1px solid var(--border);
+        box-shadow: 0 26px 60px -20px var(--shadow);
+        display: flex;
+        flex-direction: column;
+      }
+      body[data-theme="light"] .modal {
+        background: #fff;
+      }
+      .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 14px 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      body[data-theme="light"] .modal-header {
+        border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+      }
+      .modal-title {
+        font-weight: 900;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .modal-title i {
+        color: var(--primary);
+      }
+      .modal-close {
+        border: none;
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--text);
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        font-weight: 900;
+        padding: 8px 10px;
+        border-radius: 12px;
+        cursor: pointer;
+      }
+      .modal-body {
+        padding: 14px 16px;
+        overflow: auto;
+      }
+      .modal-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+      .chip-group {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .chip {
+        border: 1px solid rgba(59, 130, 246, 0.28);
+        background: rgba(59, 130, 246, 0.12);
+        color: var(--text);
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 900;
+        cursor: pointer;
+        transition: 0.18s;
+      }
+      body[data-theme="light"] .chip {
+        background: rgba(59, 130, 246, 0.08);
+      }
+      .chip:hover {
+        transform: translateY(-1px);
+        background: rgba(59, 130, 246, 0.18);
+      }
+      .chip.active {
+        background: rgba(16, 185, 129, 0.25);
+        border-color: rgba(16, 185, 129, 0.35);
+      }
+      .modal-note {
+        font-size: 0.86rem;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .modal-grid {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: 12px;
+      }
+      .panel {
+        background: var(--card);
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 12px;
+      }
+      body[data-theme="light"] .panel {
+        border: 1px solid rgba(15, 23, 42, 0.08);
+      }
+      .panel-title {
+        font-weight: 900;
+        font-size: 0.95rem;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .panel-title i {
+        color: var(--primary);
+      }
+      .chart-wrap {
+        height: 240px;
+      }
+      .chart-wrap canvas {
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      /* history table */
+      .table-wrap {
+        margin-top: 12px;
+        background: var(--card);
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+      }
+      body[data-theme="light"] .table-wrap {
+        border: 1px solid rgba(15, 23, 42, 0.08);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+      }
+      th,
+      td {
+        padding: 10px 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        text-align: center;
+        white-space: nowrap;
+      }
+      body[data-theme="light"] th,
+      body[data-theme="light"] td {
+        border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+      }
+      th {
+        font-weight: 900;
+        color: var(--text);
+        background: rgba(59, 130, 246, 0.1);
+      }
+      body[data-theme="light"] th {
+        background: rgba(59, 130, 246, 0.07);
+      }
+      .table-footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 10px 12px;
+        align-items: center;
+      }
+      .pager {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .pager button {
+        padding: 8px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(59, 130, 246, 0.28);
+        background: rgba(59, 130, 246, 0.12);
+        color: var(--text);
+        font-weight: 900;
+        cursor: pointer;
+      }
+      body[data-theme="light"] .pager button {
+        background: rgba(59, 130, 246, 0.08);
+      }
+
       /* Responsive */
+      @media (max-width: 1100px) {
+        .sensor-grid {
+          grid-template-columns: repeat(2, minmax(180px, 1fr));
+        }
+      }
       @media (max-width: 980px) {
         .main-weather {
           grid-template-columns: 1fr;
@@ -818,14 +843,8 @@
         .weather-stats {
           grid-template-columns: 1fr;
         }
-        .history-grid {
+        .modal-grid {
           grid-template-columns: 1fr;
-        }
-        .sensor-grid {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-        .topic-title {
-          max-width: 100%;
         }
       }
       @media (max-width: 768px) {
@@ -838,10 +857,8 @@
         .top-bar {
           padding: 12px 14px;
         }
-      }
-      @media (max-width: 520px) {
-        .sensor-grid {
-          grid-template-columns: 1fr;
+        .big-temp {
+          font-size: 4.2rem;
         }
       }
     </style>
@@ -853,12 +870,11 @@
       <div class="left-wrap">
         <div class="logo">
           <i class="fas fa-cloud-sun"></i>
-          <div class="logo-text">
-            <!-- ✅ Title order as requested -->
-            <h1 class="uni-title">TRƯỜNG ĐẠI HỌC SƯ PHẠM KỸ THUẬT</h1>
-            <div class="grad-title">ĐỒ ÁN TỐT NGHIỆP</div>
-            <div class="topic-title">
-              THIẾT KẾ HỆ THỐNG GIÁM SÁT THỜI TIẾT - CHẤT LƯỢNG KHÔNG KHÍ SỬ DỤNG ESP32 VÀ ỨNG DỤNG IoT
+          <div class="intro-lines">
+            <div class="uni">TRƯỜNG ĐẠI HỌC SƯ PHẠM KỸ THUẬT</div>
+            <div class="thesis">ĐỒ ÁN TỐT NGHIỆP</div>
+            <div class="topic">
+              THIẾT KẾ HỆ THỐNG GIÁM SÁT THỜI TIẾT - CHẤT LƯỢNG KHÔNG KHÍ SỬ DỤNG ESP32 VÀ ỨNG DỤNG IOT
             </div>
           </div>
         </div>
@@ -881,10 +897,15 @@
           <span class="label"><i class="fa-solid fa-sun"></i></span>
         </div>
 
-        <!-- ✅ History button -->
-        <button class="quick-btn" id="historyBtn" title="Xem lịch sử cảm biến">
-          <i class="fa-solid fa-clock-rotate-left"></i>
-          <span>Lịch sử</span>
+        <!-- ✅ Chuông (thông báo) -->
+        <button class="control-btn" id="bellBtn" title="Bật thông báo cảnh báo">
+          <i class="fa-solid fa-bell"></i>
+          <span id="bellText">Chuông</span>
+        </button>
+
+        <!-- ✅ Lịch sử -->
+        <button class="control-btn" id="historyBtn" title="Xem lịch sử cảm biến">
+          <i class="fa-solid fa-clock-rotate-left"></i> Lịch sử
         </button>
 
         <!-- Search -->
@@ -930,18 +951,6 @@
               <div class="sensor-label">💨 Bụi (PM2.5)</div>
               <div class="sensor-value" id="sensorDust">--</div>
               <div class="sensor-unit">µg/m³</div>
-              <!-- JS will fill this if you add dustDesc in index.js -->
-              <div
-                style="
-                  font-size: 0.78rem;
-                  color: var(--primary);
-                  margin-top: 6px;
-                  font-weight: 900;
-                "
-                id="dustDesc"
-              >
-                -
-              </div>
             </div>
 
             <div class="sensor-box co2">
@@ -1024,82 +1033,6 @@
 
             <div class="chart-container">
               <canvas id="forecastChart"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <!-- ✅ HISTORY BLOCK -->
-        <div class="history-block" id="historyBlock">
-          <div class="history-header">
-            <div>
-              <div class="section-title" style="margin: 0">
-                <i class="fa-solid fa-clock-rotate-left"></i> LỊCH SỬ CẢM BIẾN (TRẠM 1)
-              </div>
-              <div class="history-note" id="historyNote">
-                Chọn khoảng thời gian để xem biểu đồ lịch sử từ dữ liệu cảm biến.
-              </div>
-            </div>
-
-            <div class="history-actions">
-              <div class="chip-group" id="historyRange">
-                <button class="chip active" data-range="1h">1 giờ</button>
-                <button class="chip" data-range="6h">6 giờ</button>
-                <button class="chip" data-range="24h">1 ngày</button>
-                <button class="chip" data-range="7d">7 ngày</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="history-grid">
-            <!-- Main chart: temp + hum -->
-            <div class="history-card">
-              <div class="card-title">
-                <i class="fa-solid fa-chart-line"></i> Nhiệt độ &amp; Độ ẩm
-              </div>
-              <div class="sub">Biểu đồ lịch sử từ MongoDB (dữ liệu cảm biến)</div>
-              <div class="history-chart">
-                <canvas id="historyTempHumChart"></canvas>
-              </div>
-            </div>
-
-            <!-- Secondary chart: dust + rain (JS can extend to include AQI) -->
-            <div class="history-card">
-              <div class="card-title">
-                <i class="fa-solid fa-wind"></i> PM2.5 / AQI &amp; Mưa
-              </div>
-              <div class="sub">Gợi ý: PM2.5 (line) + Mưa (bar 0/1)</div>
-              <div class="history-chart" style="height: 230px">
-                <canvas id="historyDustRainChart"></canvas>
-              </div>
-            </div>
-          </div>
-
-          <!-- ✅ HISTORY TABLE (new) -->
-          <div class="history-card" style="margin-top: 12px; min-height: auto">
-            <div class="card-title">
-              <i class="fa-solid fa-table"></i> Bảng dữ liệu lịch sử
-            </div>
-            <div class="sub">Thời gian • Nhiệt độ • Độ ẩm • PM2.5 • AQI • UV • Mưa</div>
-
-            <div class="history-table-wrap">
-              <table class="history-table">
-                <thead>
-                  <tr>
-                    <th>Thời gian</th>
-                    <th>°C</th>
-                    <th>%</th>
-                    <th>PM2.5</th>
-                    <th>AQI</th>
-                    <th>UV</th>
-                    <th>Mưa</th>
-                  </tr>
-                </thead>
-                <tbody id="historyTableBody">
-                  <tr>
-                    <td colspan="7" style="opacity: 0.75">Đang tải...</td>
-                  </tr>
-                </tbody>
-              </table>
             </div>
           </div>
         </div>
@@ -1189,8 +1122,86 @@
       </div>
     </div>
 
+    <!-- ✅ HISTORY MODAL -->
+    <div class="modal-backdrop" id="historyModal">
+      <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-header">
+          <div class="modal-title">
+            <i class="fa-solid fa-clock-rotate-left"></i> Lịch sử cảm biến (TRẠM 1)
+          </div>
+          <button class="modal-close" id="historyClose">
+            <i class="fa-solid fa-xmark"></i> Đóng
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="modal-actions">
+            <div class="chip-group" id="historyRange">
+              <button class="chip active" data-range="1d">1 ngày</button>
+              <button class="chip" data-range="3d">3 ngày</button>
+              <button class="chip" data-range="7d">7 ngày</button>
+            </div>
+            <div class="modal-note" id="historyNote">
+              Chọn mốc thời gian để xem biểu đồ + bảng (ngắn gọn).
+            </div>
+          </div>
+
+          <div class="modal-grid">
+            <div class="panel">
+              <div class="panel-title">
+                <i class="fa-solid fa-chart-line"></i> Nhiệt độ &amp; Độ ẩm
+              </div>
+              <div class="chart-wrap">
+                <canvas id="historyTempHumChart"></canvas>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-title">
+                <i class="fa-solid fa-wind"></i> PM2.5 / AQI &amp; Mưa
+              </div>
+              <div class="chart-wrap">
+                <canvas id="historyDustRainChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-wrap" style="margin-top: 12px">
+            <table>
+              <thead>
+                <tr>
+                  <th>Thời gian</th>
+                  <th>°C</th>
+                  <th>%</th>
+                  <th>PM2.5</th>
+                  <th>AQI</th>
+                  <th>UV</th>
+                  <th>Mưa</th>
+                </tr>
+              </thead>
+              <tbody id="historyTableBody">
+                <tr>
+                  <td colspan="7" style="opacity: 0.8; font-weight: 800">
+                    Bấm “Lịch sử” để tải dữ liệu...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="table-footer">
+              <div class="modal-note" id="historyPageInfo">Trang 1</div>
+              <div class="pager">
+                <button id="historyPrev">◀ Trước</button>
+                <button id="historyNext">Sau ▶</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script>
-      // ✅ Theme toggle logic (HTML-only, JS nhỏ)
+      // ✅ Theme toggle logic
       (function () {
         const body = document.body;
         const sw = document.getElementById("themeSwitch");
@@ -1203,7 +1214,6 @@
           } catch (e) {}
         }
 
-        // init from storage
         let saved = "dark";
         try {
           saved = localStorage.getItem("theme") || "dark";
@@ -1214,6 +1224,38 @@
           sw.addEventListener("click", () => {
             const cur = body.getAttribute("data-theme") || "dark";
             setTheme(cur === "dark" ? "light" : "dark");
+          });
+        }
+      })();
+
+      // ✅ Modal open/close (logic load data nằm trong index.js)
+      (function () {
+        const modal = document.getElementById("historyModal");
+        const btn = document.getElementById("historyBtn");
+        const close = document.getElementById("historyClose");
+
+        function openModal() {
+          if (!modal) return;
+          modal.classList.add("show");
+          document.body.style.overflow = "hidden";
+          // gọi hook cho index.js (nếu có)
+          if (window.__openHistory) window.__openHistory();
+        }
+        function closeModal() {
+          if (!modal) return;
+          modal.classList.remove("show");
+          document.body.style.overflow = "";
+        }
+
+        if (btn) btn.addEventListener("click", openModal);
+        if (close) close.addEventListener("click", closeModal);
+
+        if (modal) {
+          modal.addEventListener("click", (e) => {
+            if (e.target === modal) closeModal();
+          });
+          document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && modal.classList.contains("show")) closeModal();
           });
         }
       })();

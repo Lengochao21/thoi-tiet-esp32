@@ -1,9 +1,8 @@
 // /public/index.js
-// NOTE:
-// - Giữ nguyên: forecast, station realtime, other city
-// - Thêm: HISTORY TABLE (Cách B) + nút "Lịch sử" trên top-bar (scroll xuống history block)
-// - Bảng lịch sử: chọn mốc 1h / 6h / 1 ngày / 7 ngày (dùng chips sẵn có)
-// - Có badge Tốt/Trung bình/Kém cho PM2.5 và AQI
+// - Giữ forecast + station realtime + other city
+// - Lịch sử: mở modal (Lịch sử) -> 2 chart + bảng + phân trang
+// - Chuông: xin quyền + đăng ký push (gửi subscription lên backend)
+// - Chart tự đổi màu theo theme dựa trên body[data-theme]
 
 const API_KEY = "a216f02f9004f6fedecea80b73fc8632";
 
@@ -13,11 +12,16 @@ let otherTimer = null;
 const stationChartRef = { current: null };
 const otherChartRef = { current: null };
 
-// ✅ history chart refs
-const historyTHRef = { current: null }; // Temp + Hum
-const historyDRRef = { current: null }; // Dust + Rain
-let historyRange = "1h"; // default
+// history charts
+const historyTHRef = { current: null }; // temp + hum
+const historyDARRef = { current: null }; // dust + aqi + rain
+
+// history state
+let historyRange = "1d"; // default for modal
 let historyTimer = null;
+let historyRowsCache = [];
+let historyPage = 1;
+const HISTORY_PAGE_SIZE = 10;
 
 // ============== Helpers ==============
 function $(id) {
@@ -33,6 +37,19 @@ function clamp(n, min, max) {
 }
 function isLightTheme() {
   return document.body.getAttribute("data-theme") === "light";
+}
+function safeNum(v, fallback = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+function fmtTime(iso) {
+  const d = new Date(iso);
+  if (!isFinite(d.getTime())) return "--";
+  const hhmm = d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+  const ddmm = d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+  // range dài thì hiện dd/mm hh:mm, range 1d thì hh:mm
+  if (historyRange === "7d" || historyRange === "3d") return `${ddmm} ${hhmm}`;
+  return `${hhmm}`;
 }
 
 // ============== UI text ==============
@@ -76,26 +93,58 @@ function uvText(uv) {
 // AQI kiểu 0-500 (dành cho ESP của bạn)
 function aqiText(aqi) {
   if (aqi <= 50) return "✅ Tốt";
-  if (aqi <= 100) return "⚠️ Trung bình";
-  if (aqi <= 150) return "⚠️ Kém";
-  return "🚨 Xấu";
+  if (aqi <= 100) return "🟡 Trung bình";
+  if (aqi <= 150) return "⚠️ Kém/Không tốt";
+  if (aqi <= 200) return "🚨 Không tốt cho SK";
+  if (aqi <= 300) return "☠️ Rất không tốt";
+  return "☠️ Nguy hại";
 }
 
-// ✅ PM2.5 thang phổ biến (µg/m³) — dễ thuyết minh
-function pm25Text(v) {
-  if (v <= 12) return { t: "Tốt", c: "good" };
-  if (v <= 35.4) return { t: "Trung bình", c: "mid" };
-  if (v <= 55.4) return { t: "Kém", c: "bad" };
-  return { t: "Xấu", c: "bad" };
+// PM2.5 theo thang bạn gửi (µg/m³)
+function pm25Text(pm) {
+  if (pm <= 12.0) return "✅ Tốt";
+  if (pm <= 35.4) return "🟡 Trung bình";
+  if (pm <= 55.4) return "⚠️ Kém/Không tốt";
+  if (pm <= 150.4) return "🚨 Không tốt cho SK";
+  if (pm <= 250.4) return "☠️ Rất không tốt";
+  return "☠️ Nguy hại";
 }
-function aqiBadgeClass(aqi) {
-  if (aqi <= 50) return "good";
-  if (aqi <= 100) return "mid";
-  return "bad";
+
+function badgeHtml(text) {
+  // trả về 1 badge gọn
+  // text đã có emoji đầu -> dùng màu đơn giản theo mức
+  const t = String(text || "");
+  let bg = "rgba(59,130,246,0.12)";
+  let bd = "rgba(59,130,246,0.28)";
+  if (t.includes("✅")) {
+    bg = "rgba(16,185,129,0.18)";
+    bd = "rgba(16,185,129,0.35)";
+  } else if (t.includes("🟡")) {
+    bg = "rgba(245,158,11,0.16)";
+    bd = "rgba(245,158,11,0.32)";
+  } else if (t.includes("⚠️")) {
+    bg = "rgba(249,115,22,0.16)";
+    bd = "rgba(249,115,22,0.32)";
+  } else if (t.includes("🚨") || t.includes("☠️")) {
+    bg = "rgba(239,68,68,0.16)";
+    bd = "rgba(239,68,68,0.32)";
+  }
+
+  return `<span style="
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:4px 10px;
+    border-radius:999px;
+    font-weight:900;
+    font-size:0.78rem;
+    border:1px solid ${bd};
+    background:${bg};
+  ">${t.replace("✅", "").replace("🟡", "").replace("⚠️", "").replace("🚨", "").replace("☠️", "").trim()}</span>`;
 }
 
 // ============== Chart base (forecast) ==============
-function initOrUpdateChart(canvasId, chartRef, labels, data) {
+function initOrUpdateForecastChart(canvasId, chartRef, labels, data) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
@@ -118,7 +167,7 @@ function initOrUpdateChart(canvasId, chartRef, labels, data) {
             borderWidth: 3,
             fill: true,
             tension: 0.4,
-            pointRadius: 4,
+            pointRadius: 3,
             pointBorderColor: "#fff",
             pointBorderWidth: 2,
           },
@@ -137,31 +186,26 @@ function initOrUpdateChart(canvasId, chartRef, labels, data) {
             titleColor: "#fff",
             bodyColor: "#fff",
             callbacks: {
-              label: (context) => context.parsed.y.toFixed(1) + "°C",
+              label: (context) => Number(context.parsed.y).toFixed(1) + "°C",
             },
           },
         },
         scales: {
-          y: {
-            grid: { color: gridColor },
-            ticks: { color: tickColor },
-          },
-          x: {
-            grid: { color: gridColor },
-            ticks: { color: tickColor },
-          },
+          y: { grid: { color: gridColor }, ticks: { color: tickColor } },
+          x: { grid: { color: gridColor }, ticks: { color: tickColor } },
         },
       },
     });
   } else {
     chartRef.current.data.labels = labels;
     chartRef.current.data.datasets[0].data = data;
-    // update theme colors if changed
+
     chartRef.current.options.plugins.legend.labels.color = tickColor;
     chartRef.current.options.scales.x.ticks.color = tickColor;
     chartRef.current.options.scales.y.ticks.color = tickColor;
     chartRef.current.options.scales.x.grid.color = gridColor;
     chartRef.current.options.scales.y.grid.color = gridColor;
+
     chartRef.current.update();
   }
 }
@@ -213,7 +257,7 @@ async function loadForecastFor(city, gridId, chartCanvasId, chartRef) {
     chartData.push(item.main.temp);
   });
 
-  initOrUpdateChart(chartCanvasId, chartRef, chartLabels, chartData);
+  initOrUpdateForecastChart(chartCanvasId, chartRef, chartLabels, chartData);
 }
 
 // ============== Station 1 (ESP) ==============
@@ -241,26 +285,19 @@ async function loadStation1() {
       setText("mainTemp", "--");
       setText("mainCondition", "KHÔNG KẾT NỐI TRẠM");
       setText("weatherIcon", "❌");
-      if ($("dustDesc")) setText("dustDesc", "ESP offline");
       return;
     }
 
-    const t = Number(data.temperature || 0);
-    const h = Number(data.humidity || 0);
-    const dust = Number(data.dustDensity || 0);
-    const aqi = Number(data.co2Level || 0); // AQI của ESP nằm ở co2Level
-    const uv = Number(data.uvIndex || 0);
-    const rain = Number(data.rainStatus || 0);
+    const t = safeNum(data.temperature, 0);
+    const h = safeNum(data.humidity, 0);
+    const dust = safeNum(data.dustDensity, 0);
+    const aqi = safeNum(data.co2Level, 0); // AQI của ESP nằm ở co2Level
+    const uv = safeNum(data.uvIndex, 0);
+    const rain = safeNum(data.rainStatus, 0);
 
     setText("sensorTemp", String(Math.round(t)));
     setText("sensorHumidity", String(Math.round(h)));
     setText("sensorDust", dust.toFixed(1));
-
-    // ✅ mô tả bụi: 3.x vẫn là ít
-    if ($("dustDesc")) {
-      const tag = pm25Text(dust);
-      setText("dustDesc", `PM2.5: ${tag.t}`);
-    }
 
     setText("sensorCO2", String(Math.round(aqi)));
     setText("airQuality", aqiText(aqi));
@@ -282,7 +319,6 @@ async function loadStation1() {
     console.error(e);
     setEspStatus(false);
     setText("mainCondition", "KHÔNG KẾT NỐI ĐƯỢC TRẠM");
-    if ($("dustDesc")) setText("dustDesc", "—");
   }
 }
 
@@ -342,393 +378,10 @@ async function loadOtherLocation(city) {
       } µg/m³`
     );
 
-    await loadForecastFor(
-      city,
-      "otherForecastGrid",
-      "otherForecastChart",
-      otherChartRef
-    );
+    await loadForecastFor(city, "otherForecastGrid", "otherForecastChart", otherChartRef);
   } catch (e) {
     console.error("Other city error:", e);
   }
-}
-
-// ============== ✅ HISTORY ==============
-function rangeToQuery(range) {
-  // server supports: /api/history?stationId=station1&from=...&to=...&limit=...
-  const now = Date.now();
-  let fromMs = now - 60 * 60 * 1000; // default 1h
-  if (range === "6h") fromMs = now - 6 * 60 * 60 * 1000;
-  else if (range === "24h") fromMs = now - 24 * 60 * 60 * 1000;
-  else if (range === "7d") fromMs = now - 7 * 24 * 60 * 60 * 1000;
-
-  // ISO date string
-  const from = new Date(fromMs).toISOString();
-  const to = new Date(now).toISOString();
-
-  // limit: 1 phút/lần => 1h~60, 6h~360, 24h~1440, 7d~10080
-  // clamp để không quá nặng
-  let limit = 200;
-  if (range === "1h") limit = 120;
-  if (range === "6h") limit = 500;
-  if (range === "24h") limit = 1200;
-  if (range === "7d") limit = 2000;
-  limit = clamp(limit, 50, 2000);
-
-  return { from, to, limit };
-}
-
-function buildTimeLabel(iso) {
-  const d = new Date(iso);
-  const hhmm = d.toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const ddmm = d.toLocaleDateString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-  });
-  if (historyRange === "7d") return `${ddmm} ${hhmm}`;
-  return `${hhmm}`;
-}
-
-function initOrUpdateHistoryCharts(labels, tempArr, humArr, dustArr, rainArr) {
-  const light = isLightTheme();
-  const tickColor = light ? "#0f172a" : "#f8fafc";
-  const gridColor = light ? "rgba(15,23,42,0.10)" : "rgba(255,255,255,0.10)";
-
-  // ---- Chart 1: Temp + Hum (2 lines)
-  const c1 = $("historyTempHumChart");
-  if (c1) {
-    const ctx1 = c1.getContext("2d");
-    if (!historyTHRef.current) {
-      historyTHRef.current = new Chart(ctx1, {
-        type: "line",
-        data: {
-          labels,
-          datasets: [
-            {
-              label: "Nhiệt độ (°C)",
-              data: tempArr,
-              borderColor: "#f59e0b",
-              backgroundColor: "rgba(245,158,11,0.15)",
-              borderWidth: 3,
-              fill: false,
-              tension: 0.35,
-              pointRadius: 0,
-            },
-            {
-              label: "Độ ẩm (%)",
-              data: humArr,
-              borderColor: "#3b82f6",
-              backgroundColor: "rgba(59,130,246,0.12)",
-              borderWidth: 3,
-              fill: false,
-              tension: 0.35,
-              pointRadius: 0,
-              yAxisID: "y1",
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: "index", intersect: false },
-          plugins: {
-            legend: { labels: { color: tickColor } },
-            tooltip: {
-              backgroundColor: "rgba(0,0,0,0.7)",
-              titleColor: "#fff",
-              bodyColor: "#fff",
-            },
-          },
-          scales: {
-            x: {
-              grid: { color: gridColor },
-              ticks: { color: tickColor, maxTicksLimit: 8 },
-            },
-            y: {
-              grid: { color: gridColor },
-              ticks: { color: tickColor },
-              title: { display: true, text: "°C", color: tickColor },
-            },
-            y1: {
-              position: "right",
-              grid: { drawOnChartArea: false },
-              ticks: { color: tickColor },
-              title: { display: true, text: "%", color: tickColor },
-            },
-          },
-        },
-      });
-    } else {
-      historyTHRef.current.data.labels = labels;
-      historyTHRef.current.data.datasets[0].data = tempArr;
-      historyTHRef.current.data.datasets[1].data = humArr;
-
-      historyTHRef.current.options.plugins.legend.labels.color = tickColor;
-      historyTHRef.current.options.scales.x.ticks.color = tickColor;
-      historyTHRef.current.options.scales.y.ticks.color = tickColor;
-      historyTHRef.current.options.scales.y1.ticks.color = tickColor;
-      historyTHRef.current.options.scales.x.grid.color = gridColor;
-      historyTHRef.current.options.scales.y.grid.color = gridColor;
-      historyTHRef.current.update();
-    }
-  }
-
-  // ---- Chart 2: Dust line + Rain bar 0/1
-  const c2 = $("historyDustRainChart");
-  if (c2) {
-    const ctx2 = c2.getContext("2d");
-    if (!historyDRRef.current) {
-      historyDRRef.current = new Chart(ctx2, {
-        data: {
-          labels,
-          datasets: [
-            {
-              type: "line",
-              label: "PM2.5 (µg/m³)",
-              data: dustArr,
-              borderColor: "#f97316",
-              backgroundColor: "rgba(249,115,22,0.12)",
-              borderWidth: 3,
-              fill: false,
-              tension: 0.35,
-              pointRadius: 0,
-              yAxisID: "y",
-            },
-            {
-              type: "bar",
-              label: "Mưa (0/1)",
-              data: rainArr,
-              backgroundColor: "rgba(16,185,129,0.35)",
-              borderColor: "rgba(16,185,129,0.55)",
-              borderWidth: 1,
-              yAxisID: "y1",
-              barPercentage: 1.0,
-              categoryPercentage: 1.0,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: "index", intersect: false },
-          plugins: {
-            legend: { labels: { color: tickColor } },
-            tooltip: {
-              backgroundColor: "rgba(0,0,0,0.7)",
-              titleColor: "#fff",
-              bodyColor: "#fff",
-              callbacks: {
-                label: (ctx) => {
-                  if (ctx.dataset.type === "bar") {
-                    return `Mưa: ${ctx.parsed.y === 1 ? "Có" : "Không"}`;
-                  }
-                  return `${ctx.dataset.label}: ${Number(ctx.parsed.y).toFixed(
-                    1
-                  )}`;
-                },
-              },
-            },
-          },
-          scales: {
-            x: {
-              grid: { color: gridColor },
-              ticks: { color: tickColor, maxTicksLimit: 8 },
-            },
-            y: {
-              grid: { color: gridColor },
-              ticks: { color: tickColor },
-              title: { display: true, text: "PM2.5", color: tickColor },
-            },
-            y1: {
-              position: "right",
-              min: 0,
-              max: 1,
-              grid: { drawOnChartArea: false },
-              ticks: {
-                color: tickColor,
-                callback: (v) => (v === 1 ? "Mưa" : "Khô"),
-              },
-              title: { display: true, text: "Mưa", color: tickColor },
-            },
-          },
-        },
-      });
-    } else {
-      historyDRRef.current.data.labels = labels;
-      historyDRRef.current.data.datasets[0].data = dustArr;
-      historyDRRef.current.data.datasets[1].data = rainArr;
-
-      historyDRRef.current.options.plugins.legend.labels.color = tickColor;
-      historyDRRef.current.options.scales.x.ticks.color = tickColor;
-      historyDRRef.current.options.scales.y.ticks.color = tickColor;
-      historyDRRef.current.options.scales.y1.ticks.color = tickColor;
-      historyDRRef.current.options.scales.x.grid.color = gridColor;
-      historyDRRef.current.options.scales.y.grid.color = gridColor;
-      historyDRRef.current.update();
-    }
-  }
-}
-
-// ✅ Render HISTORY TABLE (Cách B)
-function renderHistoryTable(rows) {
-  const body = $("historyTableBody");
-  if (!body) return;
-
-  if (!rows || rows.length === 0) {
-    body.innerHTML = `<tr><td colspan="7" style="opacity:.75;">Chưa có dữ liệu.</td></tr>`;
-    return;
-  }
-
-  body.innerHTML = rows
-    .map((r) => {
-      const t = Number(r.temperature ?? 0);
-      const h = Number(r.humidity ?? 0);
-      const pm = Number(r.dustDensity ?? 0);
-      const aqi = Number(r.co2Level ?? 0);
-      const uv = Number(r.uvIndex ?? 0);
-      const rain = Number(r.rainStatus ?? 0);
-
-      const time = new Date(r.createdAt || r.updatedAt).toLocaleString("vi-VN");
-
-      const pmTag = pm25Text(pm);
-      const aqiCls = aqiBadgeClass(aqi);
-      const aqiLbl = aqiText(aqi);
-
-      return `
-      <tr>
-        <td style="text-align:left;">${time}</td>
-        <td>${t.toFixed(1)}</td>
-        <td>${h.toFixed(0)}</td>
-        <td>${pm.toFixed(1)} <span class="badge ${pmTag.c}">${pmTag.t}</span></td>
-        <td>${Math.round(aqi)} <span class="badge ${aqiCls}">${aqiLbl}</span></td>
-        <td>${uv.toFixed(1)}</td>
-        <td>${
-          rain === 1
-            ? '<span class="badge mid">Mưa</span>'
-            : '<span class="badge good">Khô</span>'
-        }</td>
-      </tr>
-    `;
-    })
-    .join("");
-}
-
-async function loadHistory(range = historyRange) {
-  try {
-    if (!$("historyBlock")) return; // nếu bạn xoá khối lịch sử thì bỏ qua
-
-    historyRange = range;
-    const { from, to, limit } = rangeToQuery(range);
-
-    const url = `/api/history?stationId=station1&from=${encodeURIComponent(
-      from
-    )}&to=${encodeURIComponent(to)}&limit=${limit}`;
-
-    const res = await fetch(url);
-    const json = await res.json();
-    if (!res.ok || !json.ok) throw new Error(json.error || "history error");
-
-    const rows = json.rows || [];
-
-    if (rows.length === 0) {
-      const note = $("historyNote");
-      if (note)
-        note.innerText =
-          "Chưa có dữ liệu lịch sử (MongoDB). Hãy để ESP chạy và chờ 1-2 phút.";
-      // clear charts + table
-      initOrUpdateHistoryCharts([], [], [], [], []);
-      renderHistoryTable([]);
-      return;
-    }
-
-    // ✅ update note
-    const note = $("historyNote");
-    if (note) {
-      const last = rows[rows.length - 1];
-      const lastTime = new Date(last.createdAt).toLocaleString("vi-VN");
-      note.innerText = `Đang hiển thị ${rows.length} mẫu • cập nhật gần nhất: ${lastTime}`;
-    }
-
-    // ✅ charts (giữ ASC để chart đúng cũ -> mới)
-    const labels = rows.map((r) =>
-      buildTimeLabel(r.createdAt || r.updatedAt || r._id)
-    );
-    const tempArr = rows.map((r) => Number(r.temperature ?? 0));
-    const humArr = rows.map((r) => Number(r.humidity ?? 0));
-    const dustArr = rows.map((r) => Number(r.dustDensity ?? 0));
-    const rainArr = rows.map((r) => (Number(r.rainStatus ?? 0) === 1 ? 1 : 0));
-
-    initOrUpdateHistoryCharts(labels, tempArr, humArr, dustArr, rainArr);
-
-    // ✅ table
-    renderHistoryTable(rows);
-  } catch (e) {
-    console.error("History error:", e);
-    const note = $("historyNote");
-    if (note)
-      note.innerText =
-        "Không tải được lịch sử. Kiểm tra MongoDB (MONGO_URI) và API /api/history.";
-    renderHistoryTable([]);
-  }
-}
-
-function bindHistoryRangeChips() {
-  const wrap = $("historyRange");
-  if (!wrap) return;
-
-  wrap.querySelectorAll(".chip").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      wrap
-        .querySelectorAll(".chip")
-        .forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-      const range = btn.getAttribute("data-range") || "1h";
-      loadHistory(range);
-    });
-  });
-}
-
-function startHistoryPolling() {
-  if (!$("historyBlock")) return;
-  loadHistory(historyRange);
-  if (!historyTimer)
-    historyTimer = setInterval(() => loadHistory(historyRange), 60000);
-}
-function stopHistoryPolling() {
-  if (historyTimer) {
-    clearInterval(historyTimer);
-    historyTimer = null;
-  }
-}
-
-// Khi theme đổi -> refresh chart colors (không gọi API lại nhiều)
-function bindThemeObserver() {
-  const sw = $("themeSwitch");
-  if (!sw) return;
-
-  sw.addEventListener("click", () => {
-    // forecast charts
-    if (stationChartRef.current) stationChartRef.current.update();
-    if (otherChartRef.current) otherChartRef.current.update();
-    // history charts
-    if (historyTHRef.current || historyDRRef.current) {
-      loadHistory(historyRange); // update colors + keep fresh
-    }
-  });
-}
-
-// ✅ Nút "Lịch sử" trên top-bar: bấm vào scroll xuống history
-function bindHistoryButton() {
-  const btn = $("historyBtn");
-  const block = $("historyBlock");
-  if (!btn || !block) return;
-
-  btn.addEventListener("click", () => {
-    block.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
 }
 
 // ============== Polling ==============
@@ -736,26 +389,19 @@ function startStationPolling() {
   stopOtherPolling();
   loadStation1();
   if (!stationTimer) stationTimer = setInterval(loadStation1, 10000);
-
-  // ✅ lịch sử chỉ hợp lý khi đang ở trạm 1
-  startHistoryPolling();
 }
-
 function stopStationPolling() {
   if (stationTimer) {
     clearInterval(stationTimer);
     stationTimer = null;
   }
-  stopHistoryPolling();
 }
-
 function startOtherPolling(city) {
   stopStationPolling();
   loadOtherLocation(city);
   if (otherTimer) clearInterval(otherTimer);
   otherTimer = setInterval(() => loadOtherLocation(city), 60000);
 }
-
 function stopOtherPolling() {
   if (otherTimer) {
     clearInterval(otherTimer);
@@ -810,70 +456,608 @@ function selectLocation(loc) {
 
   if (loc.id === "station1") {
     if ($("station1Section")) $("station1Section").style.display = "block";
-    if ($("otherLocationSection"))
-      $("otherLocationSection").style.display = "none";
+    if ($("otherLocationSection")) $("otherLocationSection").style.display = "none";
     startStationPolling();
   } else {
     if ($("station1Section")) $("station1Section").style.display = "none";
-    if ($("otherLocationSection"))
-      $("otherLocationSection").style.display = "block";
+    if ($("otherLocationSection")) $("otherLocationSection").style.display = "block";
     startOtherPolling(loc.id);
   }
 }
 
-if (searchInput && dropdownList) {
-  searchInput.addEventListener("focus", () => {
-    renderDropdown(locations);
-    dropdownList.classList.add("show");
-  });
+// ============== ✅ HISTORY (Modal) ==============
+function rangeToQuery(range) {
+  const now = Date.now();
+  let fromMs = now - 24 * 60 * 60 * 1000; // 1d
+  if (range === "3d") fromMs = now - 3 * 24 * 60 * 60 * 1000;
+  if (range === "7d") fromMs = now - 7 * 24 * 60 * 60 * 1000;
 
-  document.addEventListener("click", (e) => {
-    if (!e.target.closest(".search-container")) {
-      dropdownList.classList.remove("show");
+  const from = new Date(fromMs).toISOString();
+  const to = new Date(now).toISOString();
+
+  // limit: vẫn clamp để tránh nặng
+  // nếu rule lưu 1 phút/lần thì 1d ~1440, 3d ~4320, 7d ~10080
+  let limit = 1500;
+  if (range === "1d") limit = 1800;
+  if (range === "3d") limit = 2500;
+  if (range === "7d") limit = 3000;
+  limit = clamp(limit, 200, 3000);
+
+  return { from, to, limit };
+}
+
+function applyChartThemeOptions(chart, tickColor, gridColor) {
+  if (!chart) return;
+  // scales may differ
+  const scales = chart.options?.scales || {};
+  for (const k of Object.keys(scales)) {
+    if (scales[k]?.ticks) scales[k].ticks.color = tickColor;
+    if (scales[k]?.grid) scales[k].grid.color = gridColor;
+    if (scales[k]?.title) scales[k].title.color = tickColor;
+  }
+  if (chart.options?.plugins?.legend?.labels) {
+    chart.options.plugins.legend.labels.color = tickColor;
+  }
+}
+
+function initOrUpdateHistoryCharts(labels, tempArr, humArr, dustArr, aqiArr, rainArr) {
+  const light = isLightTheme();
+  const tickColor = light ? "#0f172a" : "#f8fafc";
+  const gridColor = light ? "rgba(15,23,42,0.10)" : "rgba(255,255,255,0.10)";
+
+  // ---- Chart 1: Temp + Hum
+  const c1 = $("historyTempHumChart");
+  if (c1) {
+    const ctx1 = c1.getContext("2d");
+    if (!historyTHRef.current) {
+      historyTHRef.current = new Chart(ctx1, {
+        type: "line",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "Nhiệt độ (°C)",
+              data: tempArr,
+              borderColor: "#f59e0b",
+              backgroundColor: "rgba(245,158,11,0.15)",
+              borderWidth: 3,
+              fill: false,
+              tension: 0.35,
+              pointRadius: 0,
+              yAxisID: "y",
+            },
+            {
+              label: "Độ ẩm (%)",
+              data: humArr,
+              borderColor: "#3b82f6",
+              backgroundColor: "rgba(59,130,246,0.12)",
+              borderWidth: 3,
+              fill: false,
+              tension: 0.35,
+              pointRadius: 0,
+              yAxisID: "y1",
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { labels: { color: tickColor } },
+            tooltip: {
+              backgroundColor: "rgba(0,0,0,0.7)",
+              titleColor: "#fff",
+              bodyColor: "#fff",
+              callbacks: {
+                label: (ctx) => {
+                  const v = safeNum(ctx.parsed.y, 0);
+                  if (ctx.dataset.label.includes("Nhiệt")) return `Nhiệt độ: ${v.toFixed(1)}°C`;
+                  return `Độ ẩm: ${v.toFixed(0)}%`;
+                },
+              },
+            },
+          },
+          scales: {
+            x: { grid: { color: gridColor }, ticks: { color: tickColor, maxTicksLimit: 8 } },
+            y: {
+              grid: { color: gridColor },
+              ticks: { color: tickColor },
+              title: { display: true, text: "°C", color: tickColor },
+            },
+            y1: {
+              position: "right",
+              grid: { drawOnChartArea: false },
+              ticks: { color: tickColor },
+              title: { display: true, text: "%", color: tickColor },
+            },
+          },
+        },
+      });
+    } else {
+      historyTHRef.current.data.labels = labels;
+      historyTHRef.current.data.datasets[0].data = tempArr;
+      historyTHRef.current.data.datasets[1].data = humArr;
+
+      applyChartThemeOptions(historyTHRef.current, tickColor, gridColor);
+      historyTHRef.current.update();
     }
+  }
+
+  // ---- Chart 2: PM2.5 line + AQI line + Rain bar
+  const c2 = $("historyDustRainChart");
+  if (c2) {
+    const ctx2 = c2.getContext("2d");
+
+    // dynamic axis max
+    const maxDust = Math.max(0, ...dustArr.map((x) => safeNum(x, 0)));
+    const maxAqi = Math.max(0, ...aqiArr.map((x) => safeNum(x, 0)));
+    const yDustMax = Math.max(50, Math.ceil((maxDust * 1.25 + 5) / 5) * 5);
+    const yAqiMax = Math.max(100, Math.ceil((maxAqi * 1.25 + 10) / 10) * 10);
+
+    if (!historyDARRef.current) {
+      historyDARRef.current = new Chart(ctx2, {
+        data: {
+          labels,
+          datasets: [
+            {
+              type: "line",
+              label: "PM2.5 (µg/m³)",
+              data: dustArr,
+              borderColor: "#f97316",
+              backgroundColor: "rgba(249,115,22,0.12)",
+              borderWidth: 3,
+              fill: false,
+              tension: 0.35,
+              pointRadius: 0,
+              yAxisID: "yDust",
+            },
+            {
+              type: "line",
+              label: "AQI",
+              data: aqiArr,
+              borderColor: "#06b6d4",
+              backgroundColor: "rgba(6,182,212,0.12)",
+              borderWidth: 3,
+              fill: false,
+              tension: 0.35,
+              pointRadius: 0,
+              yAxisID: "yAqi",
+            },
+            {
+              type: "bar",
+              label: "Mưa (0/1)",
+              data: rainArr,
+              backgroundColor: "rgba(16,185,129,0.30)",
+              borderColor: "rgba(16,185,129,0.55)",
+              borderWidth: 1,
+              yAxisID: "yRain",
+              barPercentage: 1.0,
+              categoryPercentage: 1.0,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { labels: { color: tickColor } },
+            tooltip: {
+              backgroundColor: "rgba(0,0,0,0.7)",
+              titleColor: "#fff",
+              bodyColor: "#fff",
+              callbacks: {
+                label: (ctx) => {
+                  const v = safeNum(ctx.parsed.y, 0);
+                  if (ctx.dataset.type === "bar") return `Mưa: ${v === 1 ? "Có" : "Không"}`;
+                  if (ctx.dataset.label === "AQI") return `AQI: ${v.toFixed(0)} (${aqiText(v)})`;
+                  return `PM2.5: ${v.toFixed(1)} (${pm25Text(v)})`;
+                },
+              },
+            },
+          },
+          scales: {
+            x: { grid: { color: gridColor }, ticks: { color: tickColor, maxTicksLimit: 8 } },
+            yDust: {
+              position: "left",
+              min: 0,
+              max: yDustMax,
+              grid: { color: gridColor },
+              ticks: { color: tickColor },
+              title: { display: true, text: "PM2.5", color: tickColor },
+            },
+            yAqi: {
+              position: "right",
+              min: 0,
+              max: yAqiMax,
+              grid: { drawOnChartArea: false },
+              ticks: { color: tickColor },
+              title: { display: true, text: "AQI", color: tickColor },
+            },
+            yRain: {
+              position: "right",
+              min: 0,
+              max: 1,
+              grid: { drawOnChartArea: false },
+              ticks: {
+                color: tickColor,
+                callback: (v) => (v === 1 ? "Mưa" : "Khô"),
+              },
+              title: { display: true, text: "Mưa", color: tickColor },
+            },
+          },
+        },
+      });
+    } else {
+      historyDARRef.current.data.labels = labels;
+      historyDARRef.current.data.datasets[0].data = dustArr;
+      historyDARRef.current.data.datasets[1].data = aqiArr;
+      historyDARRef.current.data.datasets[2].data = rainArr;
+
+      // update dynamic axis max
+      historyDARRef.current.options.scales.yDust.max = yDustMax;
+      historyDARRef.current.options.scales.yAqi.max = yAqiMax;
+
+      applyChartThemeOptions(historyDARRef.current, tickColor, gridColor);
+      historyDARRef.current.update();
+    }
+  }
+}
+
+function renderHistoryTable() {
+  const body = $("historyTableBody");
+  const info = $("historyPageInfo");
+  if (!body) return;
+
+  const total = historyRowsCache.length;
+  const totalPages = Math.max(1, Math.ceil(total / HISTORY_PAGE_SIZE));
+  historyPage = clamp(historyPage, 1, totalPages);
+
+  const start = (historyPage - 1) * HISTORY_PAGE_SIZE;
+  const end = Math.min(total, start + HISTORY_PAGE_SIZE);
+  const pageRows = historyRowsCache.slice(start, end);
+
+  if (info) info.innerText = `Trang ${historyPage} / ${totalPages} • Tổng ${total} mẫu`;
+
+  if (pageRows.length === 0) {
+    body.innerHTML = `
+      <tr>
+        <td colspan="7" style="opacity:.85; font-weight:900">Chưa có dữ liệu lịch sử (MongoDB).</td>
+      </tr>`;
+    return;
+  }
+
+  body.innerHTML = pageRows
+    .map((r) => {
+      const time = fmtTime(r.createdAt || r.updatedAt || r._id);
+      const t = safeNum(r.temperature, 0);
+      const h = safeNum(r.humidity, 0);
+      const pm = safeNum(r.dustDensity, 0);
+      const aqi = safeNum(r.co2Level ?? r.aqi ?? r.airQuality ?? 0, 0); // linh hoạt
+      const uv = safeNum(r.uvIndex, 0);
+      const rain = safeNum(r.rainStatus, 0) === 1 ? "Mưa" : "Khô";
+
+      const pmLevel = pm25Text(pm);
+      const aqiLevel = aqiText(aqi);
+
+      return `
+        <tr>
+          <td style="font-weight:900">${time}</td>
+          <td style="font-weight:900">${t.toFixed(1)}</td>
+          <td style="font-weight:900">${h.toFixed(0)}</td>
+          <td>
+            <div style="display:flex; flex-direction:column; gap:6px; align-items:center">
+              <div style="font-weight:900">${pm.toFixed(1)}</div>
+              ${badgeHtml(pmLevel)}
+            </div>
+          </td>
+          <td>
+            <div style="display:flex; flex-direction:column; gap:6px; align-items:center">
+              <div style="font-weight:900">${aqi.toFixed(0)}</div>
+              ${badgeHtml(aqiLevel)}
+            </div>
+          </td>
+          <td style="font-weight:900">${uv.toFixed(1)}</td>
+          <td style="font-weight:900">${rain}</td>
+        </tr>`;
+    })
+    .join("");
+}
+
+async function loadHistory(range = historyRange) {
+  try {
+    historyRange = range;
+    const { from, to, limit } = rangeToQuery(range);
+
+    // order=asc để chart vẽ đúng
+    const url = `/api/history?stationId=station1&from=${encodeURIComponent(
+      from
+    )}&to=${encodeURIComponent(to)}&limit=${limit}&order=asc`;
+
+    const res = await fetch(url);
+    const json = await res.json();
+    if (!res.ok || !json.ok) throw new Error(json.error || "history error");
+
+    const rows = json.rows || [];
+    historyRowsCache = rows;
+    historyPage = 1;
+
+    if (rows.length === 0) {
+      const note = $("historyNote");
+      if (note) note.innerText = "Chưa có dữ liệu lịch sử. Hãy để ESP chạy vài phút rồi mở lại.";
+      initOrUpdateHistoryCharts([], [], [], [], [], []);
+      renderHistoryTable();
+      return;
+    }
+
+    // labels + arrays
+    const labels = rows.map((r) => fmtTime(r.createdAt || r.updatedAt || r._id));
+    const tempArr = rows.map((r) => safeNum(r.temperature, 0));
+    const humArr = rows.map((r) => safeNum(r.humidity, 0));
+    const dustArr = rows.map((r) => safeNum(r.dustDensity, 0));
+    const aqiArr = rows.map((r) => safeNum(r.co2Level ?? r.aqi ?? 0, 0));
+    const rainArr = rows.map((r) => (safeNum(r.rainStatus, 0) === 1 ? 1 : 0));
+
+    // note
+    const note = $("historyNote");
+    if (note) {
+      const last = rows[rows.length - 1];
+      const lastTime = new Date(last.createdAt || Date.now()).toLocaleString("vi-VN");
+      note.innerText = `Đang hiển thị ${rows.length} mẫu • cập nhật gần nhất: ${lastTime}`;
+    }
+
+    initOrUpdateHistoryCharts(labels, tempArr, humArr, dustArr, aqiArr, rainArr);
+    renderHistoryTable();
+  } catch (e) {
+    console.error("History error:", e);
+    const note = $("historyNote");
+    if (note) note.innerText = "Không tải được lịch sử. Kiểm tra MongoDB (MONGO_URI) và API /api/history.";
+    historyRowsCache = [];
+    historyPage = 1;
+    renderHistoryTable();
+  }
+}
+
+function bindHistoryRangeChips() {
+  const wrap = $("historyRange");
+  if (!wrap) return;
+
+  wrap.querySelectorAll(".chip").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      wrap.querySelectorAll(".chip").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      const range = btn.getAttribute("data-range") || "1d";
+      loadHistory(range);
+    });
+  });
+}
+
+function startHistoryPolling() {
+  // chỉ poll khi modal đang mở
+  stopHistoryPolling();
+  loadHistory(historyRange);
+  historyTimer = setInterval(() => loadHistory(historyRange), 60000);
+}
+function stopHistoryPolling() {
+  if (historyTimer) {
+    clearInterval(historyTimer);
+    historyTimer = null;
+  }
+}
+
+function bindHistoryPager() {
+  const prev = $("historyPrev");
+  const next = $("historyNext");
+  if (prev) {
+    prev.addEventListener("click", () => {
+      historyPage -= 1;
+      renderHistoryTable();
+    });
+  }
+  if (next) {
+    next.addEventListener("click", () => {
+      historyPage += 1;
+      renderHistoryTable();
+    });
+  }
+}
+
+function bindHistoryModalLifecycle() {
+  const modal = $("historyModal");
+  const close = $("historyClose");
+  if (!modal) return;
+
+  // khi mở modal từ HTML sẽ gọi window.__openHistory()
+  window.__openHistory = () => {
+    // set default chip active theo historyRange
+    const wrap = $("historyRange");
+    if (wrap) {
+      wrap.querySelectorAll(".chip").forEach((b) => b.classList.remove("active"));
+      const btn = wrap.querySelector(`.chip[data-range="${historyRange}"]`);
+      if (btn) btn.classList.add("active");
+    }
+    startHistoryPolling();
+  };
+
+  function stopIfClosed() {
+    // modal đóng => stop poll
+    if (!modal.classList.contains("show")) stopHistoryPolling();
+  }
+
+  if (close) close.addEventListener("click", stopIfClosed);
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) stopIfClosed();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") stopIfClosed();
   });
 
-  searchInput.addEventListener("input", (e) => {
-    const val = e.target.value.toLowerCase();
-    const filtered = locations.filter((l) =>
-      l.name.toLowerCase().includes(val)
-    );
-    renderDropdown(filtered);
-    dropdownList.classList.add("show");
-  });
+  // theo dõi class changes (trường hợp đóng từ HTML)
+  const mo = new MutationObserver(() => stopIfClosed());
+  mo.observe(modal, { attributes: true, attributeFilter: ["class"] });
+}
 
-  searchInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      const val = searchInput.value.trim();
-      if (val) {
+// Theme change -> update chart colors (không gọi API lại nặng)
+function bindThemeObserver() {
+  const sw = $("themeSwitch");
+  if (!sw) return;
+
+  sw.addEventListener("click", () => {
+    // forecast charts
+    if (stationChartRef.current) stationChartRef.current.update();
+    if (otherChartRef.current) otherChartRef.current.update();
+
+    // history charts: chỉ update theme, không cần gọi API
+    const light = isLightTheme();
+    const tickColor = light ? "#0f172a" : "#f8fafc";
+    const gridColor = light ? "rgba(15,23,42,0.10)" : "rgba(255,255,255,0.10)";
+
+    applyChartThemeOptions(historyTHRef.current, tickColor, gridColor);
+    applyChartThemeOptions(historyDARRef.current, tickColor, gridColor);
+    if (historyTHRef.current) historyTHRef.current.update();
+    if (historyDARRef.current) historyDARRef.current.update();
+  });
+}
+
+// ============== ✅ PUSH / CHUÔNG ==============
+async function registerServiceWorkerIfNeeded() {
+  if (!("serviceWorker" in navigator)) return null;
+  try {
+    const reg = await navigator.serviceWorker.register("/sw.js");
+    return reg;
+  } catch (e) {
+    console.error("SW register error:", e);
+    return null;
+  }
+}
+
+// Base64 -> Uint8Array
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+
+async function enableBell() {
+  const bellText = $("bellText");
+  const btn = $("bellBtn");
+
+  try {
+    const reg = await registerServiceWorkerIfNeeded();
+    if (!reg) throw new Error("Không đăng ký được Service Worker");
+
+    if (!("Notification" in window)) throw new Error("Trình duyệt không hỗ trợ Notification");
+
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") {
+      if (bellText) bellText.innerText = "Chuông (Tắt)";
+      return;
+    }
+
+    // lấy VAPID public key từ backend
+    const vkRes = await fetch("/api/push/vapidPublicKey");
+    const vkJson = await vkRes.json();
+    if (!vkRes.ok || !vkJson?.publicKey) throw new Error("Thiếu VAPID public key");
+
+    const publicKey = vkJson.publicKey;
+
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+    }
+
+    // gửi subscription lên backend để lưu
+    const saveRes = await fetch("/api/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stationId: "station1", subscription: sub }),
+    });
+    const saveJson = await saveRes.json().catch(() => ({}));
+    if (!saveRes.ok || saveJson?.ok === false) {
+      throw new Error(saveJson?.error || "Không lưu được subscription");
+    }
+
+    if (btn) btn.classList.add("on");
+    if (bellText) bellText.innerText = "Chuông (Bật)";
+    // demo toast nhỏ
+    console.log("✅ Push enabled");
+  } catch (e) {
+    console.error("Bell enable error:", e);
+    if (bellText) bellText.innerText = "Chuông (Lỗi)";
+  }
+}
+
+function bindBell() {
+  const btn = $("bellBtn");
+  if (!btn) return;
+  btn.addEventListener("click", enableBell);
+}
+
+// ============== Init ==============
+(function main() {
+  // SW: đăng ký sớm (để bấm chuông nhanh)
+  registerServiceWorkerIfNeeded();
+
+  // bind history
+  bindHistoryRangeChips();
+  bindHistoryPager();
+  bindHistoryModalLifecycle();
+
+  // theme observer
+  bindThemeObserver();
+
+  // bell
+  bindBell();
+
+  // dropdown
+  if (searchInput && dropdownList) {
+    searchInput.addEventListener("focus", () => {
+      renderDropdown(locations);
+      dropdownList.classList.add("show");
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".search-container")) {
         dropdownList.classList.remove("show");
-        const match = locations.find(
-          (l) => l.name.toLowerCase() === val.toLowerCase()
-        );
-        if (match) {
-          selectLocation(match);
-        } else {
-          if ($("station1Section")) $("station1Section").style.display = "none";
-          if ($("otherLocationSection"))
-            $("otherLocationSection").style.display = "block";
-          startOtherPolling(val);
+      }
+    });
+
+    searchInput.addEventListener("input", (e) => {
+      const val = e.target.value.toLowerCase();
+      const filtered = locations.filter((l) => l.name.toLowerCase().includes(val));
+      renderDropdown(filtered);
+      dropdownList.classList.add("show");
+    });
+
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const val = searchInput.value.trim();
+        if (val) {
+          dropdownList.classList.remove("show");
+          const match = locations.find((l) => l.name.toLowerCase() === val.toLowerCase());
+          if (match) {
+            selectLocation(match);
+          } else {
+            if ($("station1Section")) $("station1Section").style.display = "none";
+            if ($("otherLocationSection")) $("otherLocationSection").style.display = "block";
+            startOtherPolling(val);
+          }
         }
       }
-    }
-  });
+    });
 
-  // ✅ bind history chips + theme observer + history button
-  bindHistoryRangeChips();
-  bindThemeObserver();
-  bindHistoryButton();
-
-  // Init default
-  searchInput.value = locations[0].name;
-  startStationPolling();
-} else {
-  // fallback
-  bindHistoryRangeChips();
-  bindThemeObserver();
-  bindHistoryButton();
-  startStationPolling();
-}
+    // init default
+    searchInput.value = locations[0].name;
+    startStationPolling();
+  } else {
+    // fallback
+    startStationPolling();
+  }
+})();
