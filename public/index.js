@@ -1,8 +1,9 @@
 // /public/index.js
 // NOTE:
-// - File này giữ nguyên các phần  đang có (forecast, station realtime, other city).
-// - chỉ THÊM phần "LỊCH SỬ" (gọi /api/history) + 2 chart (Temp+Hum) và (Dust + Rain)
-// - Và cho chart/tooltip tự đổi màu theo theme (dark/light) dựa trên body[data-theme].
+// - Giữ nguyên: forecast, station realtime, other city
+// - Thêm: HISTORY TABLE (Cách B) + nút "Lịch sử" trên top-bar (scroll xuống history block)
+// - Bảng lịch sử: chọn mốc 1h / 6h / 1 ngày / 7 ngày (dùng chips sẵn có)
+// - Có badge Tốt/Trung bình/Kém cho PM2.5 và AQI
 
 const API_KEY = "a216f02f9004f6fedecea80b73fc8632";
 
@@ -78,6 +79,19 @@ function aqiText(aqi) {
   if (aqi <= 100) return "⚠️ Trung bình";
   if (aqi <= 150) return "⚠️ Kém";
   return "🚨 Xấu";
+}
+
+// ✅ PM2.5 thang phổ biến (µg/m³) — dễ thuyết minh
+function pm25Text(v) {
+  if (v <= 12) return { t: "Tốt", c: "good" };
+  if (v <= 35.4) return { t: "Trung bình", c: "mid" };
+  if (v <= 55.4) return { t: "Kém", c: "bad" };
+  return { t: "Xấu", c: "bad" };
+}
+function aqiBadgeClass(aqi) {
+  if (aqi <= 50) return "good";
+  if (aqi <= 100) return "mid";
+  return "bad";
 }
 
 // ============== Chart base (forecast) ==============
@@ -227,6 +241,7 @@ async function loadStation1() {
       setText("mainTemp", "--");
       setText("mainCondition", "KHÔNG KẾT NỐI TRẠM");
       setText("weatherIcon", "❌");
+      if ($("dustDesc")) setText("dustDesc", "ESP offline");
       return;
     }
 
@@ -240,6 +255,12 @@ async function loadStation1() {
     setText("sensorTemp", String(Math.round(t)));
     setText("sensorHumidity", String(Math.round(h)));
     setText("sensorDust", dust.toFixed(1));
+
+    // ✅ mô tả bụi: 3.x vẫn là ít
+    if ($("dustDesc")) {
+      const tag = pm25Text(dust);
+      setText("dustDesc", `PM2.5: ${tag.t}`);
+    }
 
     setText("sensorCO2", String(Math.round(aqi)));
     setText("airQuality", aqiText(aqi));
@@ -261,6 +282,7 @@ async function loadStation1() {
     console.error(e);
     setEspStatus(false);
     setText("mainCondition", "KHÔNG KẾT NỐI ĐƯỢC TRẠM");
+    if ($("dustDesc")) setText("dustDesc", "—");
   }
 }
 
@@ -320,7 +342,12 @@ async function loadOtherLocation(city) {
       } µg/m³`
     );
 
-    await loadForecastFor(city, "otherForecastGrid", "otherForecastChart", otherChartRef);
+    await loadForecastFor(
+      city,
+      "otherForecastGrid",
+      "otherForecastChart",
+      otherChartRef
+    );
   } catch (e) {
     console.error("Other city error:", e);
   }
@@ -353,11 +380,15 @@ function rangeToQuery(range) {
 
 function buildTimeLabel(iso) {
   const d = new Date(iso);
-  // gọn: HH:mm hoặc dd/MM HH:mm nếu range dài
-  const hhmm = d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-  const ddmm = d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+  const hhmm = d.toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const ddmm = d.toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+  });
   if (historyRange === "7d") return `${ddmm} ${hhmm}`;
-  if (historyRange === "24h") return `${hhmm}`;
   return `${hhmm}`;
 }
 
@@ -412,7 +443,10 @@ function initOrUpdateHistoryCharts(labels, tempArr, humArr, dustArr, rainArr) {
             },
           },
           scales: {
-            x: { grid: { color: gridColor }, ticks: { color: tickColor, maxTicksLimit: 8 } },
+            x: {
+              grid: { color: gridColor },
+              ticks: { color: tickColor, maxTicksLimit: 8 },
+            },
             y: {
               grid: { color: gridColor },
               ticks: { color: tickColor },
@@ -491,13 +525,18 @@ function initOrUpdateHistoryCharts(labels, tempArr, humArr, dustArr, rainArr) {
                   if (ctx.dataset.type === "bar") {
                     return `Mưa: ${ctx.parsed.y === 1 ? "Có" : "Không"}`;
                   }
-                  return `${ctx.dataset.label}: ${Number(ctx.parsed.y).toFixed(1)}`;
+                  return `${ctx.dataset.label}: ${Number(ctx.parsed.y).toFixed(
+                    1
+                  )}`;
                 },
               },
             },
           },
           scales: {
-            x: { grid: { color: gridColor }, ticks: { color: tickColor, maxTicksLimit: 8 } },
+            x: {
+              grid: { color: gridColor },
+              ticks: { color: tickColor, maxTicksLimit: 8 },
+            },
             y: {
               grid: { color: gridColor },
               ticks: { color: tickColor },
@@ -533,6 +572,50 @@ function initOrUpdateHistoryCharts(labels, tempArr, humArr, dustArr, rainArr) {
   }
 }
 
+// ✅ Render HISTORY TABLE (Cách B)
+function renderHistoryTable(rows) {
+  const body = $("historyTableBody");
+  if (!body) return;
+
+  if (!rows || rows.length === 0) {
+    body.innerHTML = `<tr><td colspan="7" style="opacity:.75;">Chưa có dữ liệu.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = rows
+    .map((r) => {
+      const t = Number(r.temperature ?? 0);
+      const h = Number(r.humidity ?? 0);
+      const pm = Number(r.dustDensity ?? 0);
+      const aqi = Number(r.co2Level ?? 0);
+      const uv = Number(r.uvIndex ?? 0);
+      const rain = Number(r.rainStatus ?? 0);
+
+      const time = new Date(r.createdAt || r.updatedAt).toLocaleString("vi-VN");
+
+      const pmTag = pm25Text(pm);
+      const aqiCls = aqiBadgeClass(aqi);
+      const aqiLbl = aqiText(aqi);
+
+      return `
+      <tr>
+        <td style="text-align:left;">${time}</td>
+        <td>${t.toFixed(1)}</td>
+        <td>${h.toFixed(0)}</td>
+        <td>${pm.toFixed(1)} <span class="badge ${pmTag.c}">${pmTag.t}</span></td>
+        <td>${Math.round(aqi)} <span class="badge ${aqiCls}">${aqiLbl}</span></td>
+        <td>${uv.toFixed(1)}</td>
+        <td>${
+          rain === 1
+            ? '<span class="badge mid">Mưa</span>'
+            : '<span class="badge good">Khô</span>'
+        }</td>
+      </tr>
+    `;
+    })
+    .join("");
+}
+
 async function loadHistory(range = historyRange) {
   try {
     if (!$("historyBlock")) return; // nếu bạn xoá khối lịch sử thì bỏ qua
@@ -549,21 +632,19 @@ async function loadHistory(range = historyRange) {
     if (!res.ok || !json.ok) throw new Error(json.error || "history error");
 
     const rows = json.rows || [];
+
     if (rows.length === 0) {
       const note = $("historyNote");
-      if (note) note.innerText = "Chưa có dữ liệu lịch sử (MongoDB). Hãy để ESP chạy và chờ 1-2 phút.";
-      // clear charts
+      if (note)
+        note.innerText =
+          "Chưa có dữ liệu lịch sử (MongoDB). Hãy để ESP chạy và chờ 1-2 phút.";
+      // clear charts + table
       initOrUpdateHistoryCharts([], [], [], [], []);
+      renderHistoryTable([]);
       return;
     }
 
-    const labels = rows.map((r) => buildTimeLabel(r.createdAt || r.updatedAt || r._id));
-    const tempArr = rows.map((r) => Number(r.temperature ?? 0));
-    const humArr = rows.map((r) => Number(r.humidity ?? 0));
-    const dustArr = rows.map((r) => Number(r.dustDensity ?? 0));
-    const rainArr = rows.map((r) => (Number(r.rainStatus ?? 0) === 1 ? 1 : 0));
-
-    // update note
+    // ✅ update note
     const note = $("historyNote");
     if (note) {
       const last = rows[rows.length - 1];
@@ -571,11 +652,26 @@ async function loadHistory(range = historyRange) {
       note.innerText = `Đang hiển thị ${rows.length} mẫu • cập nhật gần nhất: ${lastTime}`;
     }
 
+    // ✅ charts (giữ ASC để chart đúng cũ -> mới)
+    const labels = rows.map((r) =>
+      buildTimeLabel(r.createdAt || r.updatedAt || r._id)
+    );
+    const tempArr = rows.map((r) => Number(r.temperature ?? 0));
+    const humArr = rows.map((r) => Number(r.humidity ?? 0));
+    const dustArr = rows.map((r) => Number(r.dustDensity ?? 0));
+    const rainArr = rows.map((r) => (Number(r.rainStatus ?? 0) === 1 ? 1 : 0));
+
     initOrUpdateHistoryCharts(labels, tempArr, humArr, dustArr, rainArr);
+
+    // ✅ table
+    renderHistoryTable(rows);
   } catch (e) {
     console.error("History error:", e);
     const note = $("historyNote");
-    if (note) note.innerText = "Không tải được lịch sử. Kiểm tra MongoDB (MONGO_URI) và API /api/history.";
+    if (note)
+      note.innerText =
+        "Không tải được lịch sử. Kiểm tra MongoDB (MONGO_URI) và API /api/history.";
+    renderHistoryTable([]);
   }
 }
 
@@ -585,7 +681,9 @@ function bindHistoryRangeChips() {
 
   wrap.querySelectorAll(".chip").forEach((btn) => {
     btn.addEventListener("click", () => {
-      wrap.querySelectorAll(".chip").forEach((b) => b.classList.remove("active"));
+      wrap
+        .querySelectorAll(".chip")
+        .forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       const range = btn.getAttribute("data-range") || "1h";
       loadHistory(range);
@@ -595,10 +693,9 @@ function bindHistoryRangeChips() {
 
 function startHistoryPolling() {
   if (!$("historyBlock")) return;
-  // load now
   loadHistory(historyRange);
-  // refresh every 60s
-  if (!historyTimer) historyTimer = setInterval(() => loadHistory(historyRange), 60000);
+  if (!historyTimer)
+    historyTimer = setInterval(() => loadHistory(historyRange), 60000);
 }
 function stopHistoryPolling() {
   if (historyTimer) {
@@ -607,21 +704,30 @@ function stopHistoryPolling() {
   }
 }
 
-// Khi theme đổi -> refresh chart colors (không gọi API lại)
+// Khi theme đổi -> refresh chart colors (không gọi API lại nhiều)
 function bindThemeObserver() {
   const sw = $("themeSwitch");
   if (!sw) return;
 
   sw.addEventListener("click", () => {
-    // sau khi theme đổi, update chart theme colors:
     // forecast charts
     if (stationChartRef.current) stationChartRef.current.update();
     if (otherChartRef.current) otherChartRef.current.update();
-    // history charts: gọi lại init update với data hiện tại
+    // history charts
     if (historyTHRef.current || historyDRRef.current) {
-      // gọi nhẹ loadHistory để update colors + labels (server cached/nhanh)
-      loadHistory(historyRange);
+      loadHistory(historyRange); // update colors + keep fresh
     }
+  });
+}
+
+// ✅ Nút "Lịch sử" trên top-bar: bấm vào scroll xuống history
+function bindHistoryButton() {
+  const btn = $("historyBtn");
+  const block = $("historyBlock");
+  if (!btn || !block) return;
+
+  btn.addEventListener("click", () => {
+    block.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 }
 
@@ -704,11 +810,13 @@ function selectLocation(loc) {
 
   if (loc.id === "station1") {
     if ($("station1Section")) $("station1Section").style.display = "block";
-    if ($("otherLocationSection")) $("otherLocationSection").style.display = "none";
+    if ($("otherLocationSection"))
+      $("otherLocationSection").style.display = "none";
     startStationPolling();
   } else {
     if ($("station1Section")) $("station1Section").style.display = "none";
-    if ($("otherLocationSection")) $("otherLocationSection").style.display = "block";
+    if ($("otherLocationSection"))
+      $("otherLocationSection").style.display = "block";
     startOtherPolling(loc.id);
   }
 }
@@ -727,7 +835,9 @@ if (searchInput && dropdownList) {
 
   searchInput.addEventListener("input", (e) => {
     const val = e.target.value.toLowerCase();
-    const filtered = locations.filter((l) => l.name.toLowerCase().includes(val));
+    const filtered = locations.filter((l) =>
+      l.name.toLowerCase().includes(val)
+    );
     renderDropdown(filtered);
     dropdownList.classList.add("show");
   });
@@ -737,21 +847,25 @@ if (searchInput && dropdownList) {
       const val = searchInput.value.trim();
       if (val) {
         dropdownList.classList.remove("show");
-        const match = locations.find((l) => l.name.toLowerCase() === val.toLowerCase());
+        const match = locations.find(
+          (l) => l.name.toLowerCase() === val.toLowerCase()
+        );
         if (match) {
           selectLocation(match);
         } else {
           if ($("station1Section")) $("station1Section").style.display = "none";
-          if ($("otherLocationSection")) $("otherLocationSection").style.display = "block";
+          if ($("otherLocationSection"))
+            $("otherLocationSection").style.display = "block";
           startOtherPolling(val);
         }
       }
     }
   });
 
-  // ✅ bind history chips + theme observer
+  // ✅ bind history chips + theme observer + history button
   bindHistoryRangeChips();
   bindThemeObserver();
+  bindHistoryButton();
 
   // Init default
   searchInput.value = locations[0].name;
@@ -760,5 +874,6 @@ if (searchInput && dropdownList) {
   // fallback
   bindHistoryRangeChips();
   bindThemeObserver();
+  bindHistoryButton();
   startStationPolling();
 }

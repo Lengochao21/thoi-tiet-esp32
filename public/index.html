@@ -84,6 +84,7 @@
         align-items: center;
         gap: 12px;
         flex-wrap: wrap;
+        min-width: 280px;
       }
 
       .logo {
@@ -95,16 +96,33 @@
         font-size: 1.9rem;
         color: var(--primary);
       }
-      .logo-text h1 {
-        font-size: 0.95rem;
-        font-weight: 800;
-        letter-spacing: 0.2px;
+
+      /* ✅ Updated title block */
+      .logo-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
       }
-      .logo-text .sub {
+      .uni-title {
+        font-size: 0.98rem;
+        font-weight: 900;
+        color: var(--primary);
+        letter-spacing: 0.2px;
+        line-height: 1.05rem;
+      }
+      .grad-title {
+        font-size: 0.82rem;
+        font-weight: 900;
+        color: var(--text);
+        opacity: 0.92;
+        line-height: 1.05rem;
+      }
+      .topic-title {
+        max-width: 560px;
         font-size: 0.78rem;
+        font-weight: 800;
         color: var(--muted);
-        margin-top: 2px;
-        font-weight: 600;
+        line-height: 1.15rem;
       }
 
       .right-wrap {
@@ -292,6 +310,30 @@
         left: 23px;
       }
 
+      /* ✅ Quick history button */
+      .quick-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(59, 130, 246, 0.28);
+        background: rgba(59, 130, 246, 0.12);
+        color: var(--text);
+        font-weight: 900;
+        cursor: pointer;
+      }
+      body[data-theme="light"] .quick-btn {
+        background: rgba(59, 130, 246, 0.08);
+      }
+      .quick-btn:hover {
+        background: rgba(59, 130, 246, 0.18);
+        transform: translateY(-1px);
+      }
+      .quick-btn i {
+        color: var(--primary);
+      }
+
       /* Layout */
       .container {
         max-width: 1400px;
@@ -326,11 +368,13 @@
         box-shadow: 0 16px 26px -18px var(--shadow);
       }
 
+      /* ✅ 4 columns desktop => 4 + 3 */
       .sensor-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 14px;
       }
+
       .sensor-box {
         background: var(--card2);
         padding: 14px;
@@ -655,6 +699,68 @@
         height: 100% !important;
       }
 
+      /* ✅ HISTORY TABLE */
+      .history-table-wrap {
+        overflow: auto;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      body[data-theme="light"] .history-table-wrap {
+        border: 1px solid rgba(15, 23, 42, 0.08);
+      }
+      .history-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 760px; /* mobile will scroll */
+        background: var(--card);
+      }
+      .history-table th,
+      .history-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        font-weight: 800;
+        text-align: center;
+        white-space: nowrap;
+      }
+      body[data-theme="light"] .history-table th,
+      body[data-theme="light"] .history-table td {
+        border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+      }
+      .history-table th {
+        position: sticky;
+        top: 0;
+        background: rgba(30, 41, 59, 0.92);
+        color: var(--text);
+        z-index: 2;
+      }
+      body[data-theme="light"] .history-table th {
+        background: rgba(255, 255, 255, 0.92);
+      }
+      .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 900;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        margin-left: 6px;
+      }
+      body[data-theme="light"] .badge {
+        border: 1px solid rgba(15, 23, 42, 0.12);
+      }
+      .badge.good {
+        background: rgba(16, 185, 129, 0.18);
+      }
+      .badge.mid {
+        background: rgba(245, 158, 11, 0.18);
+      }
+      .badge.bad {
+        background: rgba(239, 68, 68, 0.18);
+      }
+      .badge.gray {
+        background: rgba(148, 163, 184, 0.18);
+      }
+
       /* Details grid bottom */
       .detail-grid {
         margin-top: 18px;
@@ -715,19 +821,27 @@
         .history-grid {
           grid-template-columns: 1fr;
         }
+        .sensor-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .topic-title {
+          max-width: 100%;
+        }
       }
       @media (max-width: 768px) {
         .container {
           padding: 18px;
-        }
-        .sensor-grid {
-          grid-template-columns: repeat(2, 1fr);
         }
         .search-container {
           width: 100%;
         }
         .top-bar {
           padding: 12px 14px;
+        }
+      }
+      @media (max-width: 520px) {
+        .sensor-grid {
+          grid-template-columns: 1fr;
         }
       }
     </style>
@@ -740,8 +854,12 @@
         <div class="logo">
           <i class="fas fa-cloud-sun"></i>
           <div class="logo-text">
-            <h1>ĐỒ ÁN TỐT NGHIỆP</h1>
-            <div class="sub">UTE Weather Station Dashboard</div>
+            <!-- ✅ Title order as requested -->
+            <h1 class="uni-title">TRƯỜNG ĐẠI HỌC SƯ PHẠM KỸ THUẬT</h1>
+            <div class="grad-title">ĐỒ ÁN TỐT NGHIỆP</div>
+            <div class="topic-title">
+              THIẾT KẾ HỆ THỐNG GIÁM SÁT THỜI TIẾT - CHẤT LƯỢNG KHÔNG KHÍ SỬ DỤNG ESP32 VÀ ỨNG DỤNG IoT
+            </div>
           </div>
         </div>
 
@@ -762,6 +880,12 @@
           </div>
           <span class="label"><i class="fa-solid fa-sun"></i></span>
         </div>
+
+        <!-- ✅ History button -->
+        <button class="quick-btn" id="historyBtn" title="Xem lịch sử cảm biến">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+          <span>Lịch sử</span>
+        </button>
 
         <!-- Search -->
         <div class="search-container">
@@ -806,6 +930,18 @@
               <div class="sensor-label">💨 Bụi (PM2.5)</div>
               <div class="sensor-value" id="sensorDust">--</div>
               <div class="sensor-unit">µg/m³</div>
+              <!-- JS will fill this if you add dustDesc in index.js -->
+              <div
+                style="
+                  font-size: 0.78rem;
+                  color: var(--primary);
+                  margin-top: 6px;
+                  font-weight: 900;
+                "
+                id="dustDesc"
+              >
+                -
+              </div>
             </div>
 
             <div class="sensor-box co2">
@@ -892,7 +1028,7 @@
           </div>
         </div>
 
-        <!-- ✅ HISTORY BLOCK (new) -->
+        <!-- ✅ HISTORY BLOCK -->
         <div class="history-block" id="historyBlock">
           <div class="history-header">
             <div>
@@ -908,7 +1044,7 @@
               <div class="chip-group" id="historyRange">
                 <button class="chip active" data-range="1h">1 giờ</button>
                 <button class="chip" data-range="6h">6 giờ</button>
-                <button class="chip" data-range="24h">24 giờ</button>
+                <button class="chip" data-range="24h">1 ngày</button>
                 <button class="chip" data-range="7d">7 ngày</button>
               </div>
             </div>
@@ -926,7 +1062,7 @@
               </div>
             </div>
 
-            <!-- Secondary chart: dust or AQI, plus rain -->
+            <!-- Secondary chart: dust + rain (JS can extend to include AQI) -->
             <div class="history-card">
               <div class="card-title">
                 <i class="fa-solid fa-wind"></i> PM2.5 / AQI &amp; Mưa
@@ -935,6 +1071,35 @@
               <div class="history-chart" style="height: 230px">
                 <canvas id="historyDustRainChart"></canvas>
               </div>
+            </div>
+          </div>
+
+          <!-- ✅ HISTORY TABLE (new) -->
+          <div class="history-card" style="margin-top: 12px; min-height: auto">
+            <div class="card-title">
+              <i class="fa-solid fa-table"></i> Bảng dữ liệu lịch sử
+            </div>
+            <div class="sub">Thời gian • Nhiệt độ • Độ ẩm • PM2.5 • AQI • UV • Mưa</div>
+
+            <div class="history-table-wrap">
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th>Thời gian</th>
+                    <th>°C</th>
+                    <th>%</th>
+                    <th>PM2.5</th>
+                    <th>AQI</th>
+                    <th>UV</th>
+                    <th>Mưa</th>
+                  </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                  <tr>
+                    <td colspan="7" style="opacity: 0.75">Đang tải...</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
