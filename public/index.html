@@ -21,61 +21,121 @@
         --success: #10b981;
         --danger: #ef4444;
         --warning: #f59e0b;
+
+        /* theme tokens (dark default) */
+        --bg0: #0f172a;
+        --bg1: #1e293b;
+        --card: rgba(30, 41, 59, 0.75);
+        --card2: rgba(30, 41, 59, 0.6);
+        --text: #f8fafc;
+        --muted: rgba(255, 255, 255, 0.65);
+        --muted2: rgba(255, 255, 255, 0.5);
+        --border: rgba(59, 130, 246, 0.25);
+        --shadow: rgba(0, 0, 0, 0.45);
       }
+
+      /* Light theme overrides */
+      body[data-theme="light"] {
+        --bg0: #f3f6ff;
+        --bg1: #ffffff;
+        --card: rgba(255, 255, 255, 0.92);
+        --card2: rgba(255, 255, 255, 0.82);
+        --text: #0f172a;
+        --muted: rgba(15, 23, 42, 0.65);
+        --muted2: rgba(15, 23, 42, 0.5);
+        --border: rgba(59, 130, 246, 0.2);
+        --shadow: rgba(15, 23, 42, 0.12);
+      }
+
       * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
       }
+
       body {
         font-family: "Inter", sans-serif;
-        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-        color: #f8fafc;
+        background: linear-gradient(180deg, var(--bg0) 0%, var(--bg1) 100%);
+        color: var(--text);
         min-height: 100vh;
       }
+
+      /* Top bar */
       .top-bar {
-        background: rgba(15, 23, 42, 0.95);
-        border-bottom: 1px solid rgba(59, 130, 246, 0.2);
-        padding: 15px 30px;
+        background: rgba(15, 23, 42, 0.85);
+        border-bottom: 1px solid var(--border);
+        padding: 14px 22px;
         display: flex;
         justify-content: space-between;
         align-items: center;
         flex-wrap: wrap;
-        gap: 14px;
+        gap: 12px;
         position: sticky;
         top: 0;
         z-index: 100;
+        backdrop-filter: blur(14px);
       }
+      body[data-theme="light"] .top-bar {
+        background: rgba(255, 255, 255, 0.85);
+      }
+
+      .left-wrap {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
       .logo {
         display: flex;
         align-items: center;
         gap: 10px;
       }
       .logo i {
-        font-size: 2rem;
+        font-size: 1.9rem;
         color: var(--primary);
       }
       .logo-text h1 {
         font-size: 0.95rem;
-        font-weight: 700;
+        font-weight: 800;
+        letter-spacing: 0.2px;
       }
+      .logo-text .sub {
+        font-size: 0.78rem;
+        color: var(--muted);
+        margin-top: 2px;
+        font-weight: 600;
+      }
+
+      .right-wrap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
       .status-bar {
         display: flex;
         gap: 10px;
+        align-items: center;
       }
       .status-item {
         display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 6px 12px;
-        background: rgba(59, 130, 246, 0.1);
-        border: 1px solid rgba(59, 130, 246, 0.3);
-        border-radius: 8px;
-        font-size: 0.8rem;
+        gap: 8px;
+        padding: 7px 12px;
+        background: rgba(59, 130, 246, 0.12);
+        border: 1px solid rgba(59, 130, 246, 0.28);
+        border-radius: 10px;
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+      body[data-theme="light"] .status-item {
+        background: rgba(59, 130, 246, 0.08);
       }
       .status-dot {
-        width: 8px;
-        height: 8px;
+        width: 9px;
+        height: 9px;
         border-radius: 50%;
         animation: pulse 2s infinite;
         background: var(--danger);
@@ -89,124 +149,199 @@
           opacity: 1;
         }
         50% {
-          opacity: 0.5;
+          opacity: 0.55;
         }
       }
+
+      /* Search */
       .search-container {
         position: relative;
-        width: 300px;
-        font-family: inherit;
+        width: 320px;
       }
       .search-box {
         display: flex;
         align-items: center;
-        background: rgba(59, 130, 246, 0.1);
-        border: 1px solid rgba(59, 130, 246, 0.3);
-        border-radius: 8px;
-        padding: 8px 12px;
+        background: rgba(59, 130, 246, 0.12);
+        border: 1px solid rgba(59, 130, 246, 0.28);
+        border-radius: 12px;
+        padding: 9px 12px;
         cursor: pointer;
         transition: all 0.2s;
       }
       .search-box:hover {
-        background: rgba(59, 130, 246, 0.2);
+        background: rgba(59, 130, 246, 0.18);
       }
       .search-icon,
       .arrow-icon {
         color: var(--primary);
-        font-size: 0.9rem;
+        font-size: 0.92rem;
       }
       .search-input-custom {
         background: transparent;
         border: none;
-        color: white;
+        color: var(--text);
         width: 100%;
         outline: none;
         font-size: 0.95rem;
         margin: 0 10px;
         font-family: inherit;
+        font-weight: 600;
       }
       .search-input-custom::placeholder {
-        color: rgba(255, 255, 255, 0.5);
+        color: var(--muted2);
       }
       .dropdown-list {
         position: absolute;
-        top: calc(100% + 6px);
+        top: calc(100% + 8px);
         left: 0;
         width: 100%;
-        background: #1e293b;
-        border: 1px solid rgba(59, 130, 246, 0.3);
-        border-radius: 8px;
+        background: rgba(30, 41, 59, 0.95);
+        border: 1px solid rgba(59, 130, 246, 0.25);
+        border-radius: 12px;
         list-style: none;
-        max-height: 300px;
+        max-height: 310px;
         overflow-y: auto;
         z-index: 1000;
         display: none;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 14px 22px -8px var(--shadow);
+        backdrop-filter: blur(10px);
+      }
+      body[data-theme="light"] .dropdown-list {
+        background: rgba(255, 255, 255, 0.95);
       }
       .dropdown-list.show {
         display: block;
       }
       .dropdown-item {
-        padding: 10px 15px;
+        padding: 11px 14px;
         cursor: pointer;
-        font-size: 0.9rem;
-        color: #e2e8f0;
+        font-size: 0.92rem;
+        color: var(--text);
         display: flex;
         align-items: center;
         gap: 10px;
-        transition: background 0.2s;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        transition: background 0.18s;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      body[data-theme="light"] .dropdown-item {
+        border-bottom: 1px solid rgba(15, 23, 42, 0.06);
       }
       .dropdown-item:last-child {
         border-bottom: none;
       }
       .dropdown-item:hover {
-        background: rgba(59, 130, 246, 0.2);
-        color: white;
+        background: rgba(59, 130, 246, 0.16);
       }
       .dropdown-list::-webkit-scrollbar {
-        width: 5px;
+        width: 6px;
       }
       .dropdown-list::-webkit-scrollbar-thumb {
-        background: var(--primary);
-        border-radius: 3px;
+        background: rgba(59, 130, 246, 0.8);
+        border-radius: 10px;
       }
+
+      /* iOS-like theme toggle */
+      .theme-toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 10px;
+        background: rgba(59, 130, 246, 0.12);
+        border: 1px solid rgba(59, 130, 246, 0.28);
+        border-radius: 12px;
+        user-select: none;
+      }
+      .theme-toggle .label {
+        font-size: 0.82rem;
+        font-weight: 800;
+        color: var(--text);
+        opacity: 0.9;
+        white-space: nowrap;
+      }
+      .switch {
+        position: relative;
+        width: 48px;
+        height: 28px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        cursor: pointer;
+        transition: 0.2s;
+      }
+      body[data-theme="light"] .switch {
+        background: rgba(15, 23, 42, 0.08);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+      }
+      .knob {
+        position: absolute;
+        top: 50%;
+        left: 3px;
+        width: 22px;
+        height: 22px;
+        border-radius: 999px;
+        transform: translateY(-50%);
+        background: #fff;
+        box-shadow: 0 10px 18px -10px rgba(0, 0, 0, 0.6);
+        transition: 0.2s;
+      }
+      .switch.on {
+        background: rgba(16, 185, 129, 0.35);
+        border-color: rgba(16, 185, 129, 0.35);
+      }
+      .switch.on .knob {
+        left: 23px;
+      }
+
+      /* Layout */
       .container {
         max-width: 1400px;
         margin: 0 auto;
-        padding: 30px;
+        padding: 26px;
       }
 
-      .sensor-status {
-        background: linear-gradient(
-          135deg,
-          rgba(59, 130, 246, 0.15),
-          rgba(16, 185, 129, 0.15)
-        );
-        border-radius: 20px;
-        padding: 20px;
-        margin-bottom: 30px;
-        border: 1px solid rgba(59, 130, 246, 0.3);
-      }
-      .sensor-title {
-        font-size: 1.1rem;
-        font-weight: 700;
-        margin-bottom: 15px;
+      /* Section title */
+      .section-title {
+        font-size: 1.05rem;
+        font-weight: 900;
+        margin: 8px 0 14px;
         display: flex;
         align-items: center;
         gap: 10px;
       }
+      .section-title i {
+        color: var(--primary);
+      }
+
+      /* Sensor status cards */
+      .sensor-status {
+        background: linear-gradient(
+          135deg,
+          rgba(59, 130, 246, 0.16),
+          rgba(16, 185, 129, 0.14)
+        );
+        border-radius: 20px;
+        padding: 18px;
+        margin-bottom: 22px;
+        border: 1px solid var(--border);
+        box-shadow: 0 16px 26px -18px var(--shadow);
+      }
+
       .sensor-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 15px;
+        gap: 14px;
       }
       .sensor-box {
-        background: rgba(30, 41, 59, 0.6);
-        padding: 15px;
-        border-radius: 12px;
+        background: var(--card2);
+        padding: 14px;
+        border-radius: 14px;
         border-left: 4px solid var(--primary);
+        border: 1px solid rgba(255, 255, 255, 0.06);
       }
+      body[data-theme="light"] .sensor-box {
+        border: 1px solid rgba(15, 23, 42, 0.06);
+      }
+
       .sensor-box.temp {
         border-left-color: var(--danger);
       }
@@ -229,181 +364,361 @@
         border-left-color: #f97316;
       }
       .sensor-label {
-        font-size: 0.8rem;
-        color: rgba(255, 255, 255, 0.6);
-        margin-bottom: 5px;
+        font-size: 0.82rem;
+        color: var(--muted);
+        margin-bottom: 6px;
+        font-weight: 700;
       }
       .sensor-value {
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: white;
+        font-size: 1.85rem;
+        font-weight: 900;
+        color: var(--text);
       }
       .sensor-unit {
         font-size: 0.75rem;
-        color: rgba(255, 255, 255, 0.5);
-        margin-top: 3px;
+        color: var(--muted2);
+        margin-top: 4px;
+        font-weight: 700;
       }
 
+      /* Hero weather */
       .hero-weather {
         background: linear-gradient(
           135deg,
-          rgba(59, 130, 246, 0.2),
-          rgba(16, 185, 129, 0.2)
+          rgba(59, 130, 246, 0.18),
+          rgba(16, 185, 129, 0.16)
         );
-        border-radius: 20px;
-        padding: 40px;
-        margin-bottom: 30px;
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 22px;
+        padding: 26px;
+        margin-bottom: 22px;
+        backdrop-filter: blur(18px);
+        border: 1px solid var(--border);
+        box-shadow: 0 18px 30px -18px var(--shadow);
       }
       .station-badge {
-        display: inline-block;
-        padding: 5px 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
         background: linear-gradient(135deg, #ef4444, #dc2626);
-        border-radius: 20px;
-        font-size: 0.7rem;
-        font-weight: 700;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 900;
         margin-bottom: 10px;
+        color: #fff;
       }
-      .location-title {
-        margin-bottom: 20px;
-      }
+
       .location-title h2 {
-        font-size: 1.8rem;
-        font-weight: 700;
+        font-size: 1.85rem;
+        font-weight: 900;
+        margin-bottom: 10px;
       }
       .main-weather {
         display: grid;
-        grid-template-columns: 1.5fr 2fr;
-        gap: 40px;
+        grid-template-columns: 1.2fr 2fr;
+        gap: 22px;
         align-items: center;
       }
       .temp-display {
         text-align: center;
+        padding: 12px;
+        border-radius: 18px;
+        background: rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      body[data-theme="light"] .temp-display {
+        background: rgba(255, 255, 255, 0.4);
+        border: 1px solid rgba(15, 23, 42, 0.08);
       }
       .big-temp {
-        font-size: 5rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, #fff, var(--primary));
+        font-size: 4.9rem;
+        font-weight: 900;
+        background: linear-gradient(135deg, var(--text), var(--primary));
         background-clip: text;
         -webkit-background-clip: text;
         color: transparent;
+        line-height: 1;
+        margin-bottom: 6px;
       }
       .weather-icon {
-        font-size: 4rem;
-        margin-bottom: 15px;
+        font-size: 3.7rem;
+        margin: 6px 0 12px;
       }
       .condition {
-        font-size: 1.2rem;
-        color: rgba(255, 255, 255, 0.8);
+        font-size: 1.08rem;
+        color: var(--muted);
+        font-weight: 800;
       }
+
       .weather-stats {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 15px;
+        gap: 12px;
       }
       .stat-item {
-        background: rgba(30, 41, 59, 0.5);
-        padding: 15px;
-        border-radius: 12px;
+        background: var(--card);
+        padding: 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      body[data-theme="light"] .stat-item {
+        border: 1px solid rgba(15, 23, 42, 0.08);
       }
       .stat-label {
-        font-size: 0.8rem;
-        color: rgba(255, 255, 255, 0.6);
-        margin-bottom: 3px;
+        font-size: 0.82rem;
+        color: var(--muted);
+        margin-bottom: 4px;
+        font-weight: 800;
       }
       .stat-value {
-        font-size: 1.4rem;
-        font-weight: 700;
+        font-size: 1.45rem;
+        font-weight: 900;
+        color: var(--text);
       }
       .stat-sub {
-        font-size: 0.85rem;
+        font-size: 0.88rem;
         margin-top: 6px;
-        color: rgba(255, 255, 255, 0.6);
+        color: var(--muted2);
         line-height: 1.2rem;
+        font-weight: 700;
       }
 
+      /* Forecast */
+      .forecast-section {
+        margin-top: 10px;
+      }
+      .forecast-title {
+        font-size: 1.05rem;
+        font-weight: 900;
+        margin: 6px 0 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .forecast-title i {
+        color: var(--primary);
+      }
       .forecast-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
         gap: 12px;
       }
       .forecast-card {
-        background: rgba(30, 41, 59, 0.8);
-        padding: 15px;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: var(--card);
+        padding: 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
         text-align: center;
       }
+      body[data-theme="light"] .forecast-card {
+        border: 1px solid rgba(15, 23, 42, 0.08);
+      }
       .forecast-day {
-        font-size: 0.85rem;
-        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.86rem;
+        color: var(--muted);
         margin-bottom: 8px;
+        font-weight: 800;
       }
       .forecast-icon {
         font-size: 2rem;
-        margin: 5px 0;
+        margin: 4px 0;
       }
       .forecast-temp {
-        font-size: 1rem;
-        font-weight: 700;
+        font-size: 1.05rem;
+        font-weight: 900;
       }
       .forecast-info {
-        font-size: 0.75rem;
-        color: rgba(255, 255, 255, 0.5);
-        margin-top: 5px;
-      }
-      .chart-container {
-        background: rgba(30, 41, 59, 0.8);
-        padding: 20px;
-        border-radius: 15px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        margin-bottom: 30px;
-        height: 300px;
+        font-size: 0.78rem;
+        color: var(--muted2);
+        margin-top: 6px;
+        font-weight: 800;
       }
 
+      .chart-container {
+        background: var(--card);
+        padding: 16px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        margin-top: 12px;
+        height: 300px;
+      }
+      body[data-theme="light"] .chart-container {
+        border: 1px solid rgba(15, 23, 42, 0.08);
+      }
+
+      /* History block */
+      .history-block {
+        margin-top: 22px;
+        background: linear-gradient(
+          135deg,
+          rgba(59, 130, 246, 0.14),
+          rgba(16, 185, 129, 0.12)
+        );
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        padding: 18px;
+        box-shadow: 0 18px 30px -18px var(--shadow);
+      }
+
+      .history-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+
+      .history-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .chip-group {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .chip {
+        border: 1px solid rgba(59, 130, 246, 0.28);
+        background: rgba(59, 130, 246, 0.12);
+        color: var(--text);
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        font-weight: 900;
+        cursor: pointer;
+        transition: 0.18s;
+      }
+      body[data-theme="light"] .chip {
+        background: rgba(59, 130, 246, 0.08);
+      }
+      .chip:hover {
+        transform: translateY(-1px);
+        background: rgba(59, 130, 246, 0.18);
+      }
+      .chip.active {
+        background: rgba(16, 185, 129, 0.25);
+        border-color: rgba(16, 185, 129, 0.35);
+      }
+
+      .history-note {
+        font-size: 0.86rem;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .history-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 12px;
+      }
+
+      .history-card {
+        background: var(--card);
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 14px;
+        min-height: 300px;
+      }
+      body[data-theme="light"] .history-card {
+        border: 1px solid rgba(15, 23, 42, 0.08);
+      }
+
+      .history-card .card-title {
+        font-size: 0.95rem;
+        font-weight: 900;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text);
+      }
+      .history-card .card-title i {
+        color: var(--primary);
+      }
+      .history-card .sub {
+        font-size: 0.82rem;
+        color: var(--muted2);
+        margin-top: -4px;
+        margin-bottom: 8px;
+        font-weight: 700;
+      }
+
+      .history-chart {
+        height: 230px;
+      }
+      .history-chart canvas {
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      /* Details grid bottom */
       .detail-grid {
+        margin-top: 18px;
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
+        gap: 12px;
       }
       .detail-card {
-        background: rgba(30, 41, 59, 0.8);
-        padding: 20px;
-        border-radius: 15px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: var(--card);
+        padding: 16px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      body[data-theme="light"] .detail-card {
+        border: 1px solid rgba(15, 23, 42, 0.08);
       }
       .detail-card i {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
         color: var(--primary);
         margin-right: 8px;
       }
       .detail-title {
-        font-size: 0.9rem;
-        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.86rem;
+        color: var(--muted);
         text-transform: uppercase;
         margin-bottom: 10px;
+        font-weight: 900;
+        letter-spacing: 0.5px;
       }
       .detail-value {
-        font-size: 2rem;
-        font-weight: 700;
+        font-size: 1.9rem;
+        font-weight: 900;
+        color: var(--text);
       }
 
+      /* Footer */
       .footer {
         text-align: center;
-        padding: 30px 20px;
-        border-top: 1px solid rgba(59, 130, 246, 0.2);
-        margin-top: 50px;
+        padding: 26px 14px;
+        border-top: 1px solid var(--border);
+        margin-top: 40px;
       }
       .footer .info {
-        font-size: 0.85rem;
-        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.92rem;
+        color: var(--muted);
+        font-weight: 800;
+        line-height: 1.55rem;
       }
 
-      @media (max-width: 768px) {
+      /* Responsive */
+      @media (max-width: 980px) {
         .main-weather {
           grid-template-columns: 1fr;
-          gap: 20px;
+        }
+        .weather-stats {
+          grid-template-columns: 1fr;
+        }
+        .history-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 768px) {
+        .container {
+          padding: 18px;
         }
         .sensor-grid {
           grid-template-columns: repeat(2, 1fr);
@@ -411,51 +726,66 @@
         .search-container {
           width: 100%;
         }
-        .weather-stats {
-          grid-template-columns: 1fr;
+        .top-bar {
+          padding: 12px 14px;
         }
       }
     </style>
   </head>
 
-  <body>
+  <body data-theme="dark">
+    <!-- TOP BAR -->
     <div class="top-bar">
-      <div class="logo">
-        <i class="fas fa-cloud-sun"></i>
-        <div class="logo-text">
-          <h1>UTE Weather Station</h1>
+      <div class="left-wrap">
+        <div class="logo">
+          <i class="fas fa-cloud-sun"></i>
+          <div class="logo-text">
+            <h1>ĐỒ ÁN TỐT NGHIỆP</h1>
+            <div class="sub">UTE Weather Station Dashboard</div>
+          </div>
+        </div>
+
+        <div class="status-bar">
+          <div class="status-item">
+            <div class="status-dot" id="espStatus"></div>
+            <span id="espStatusText">ESP: Chưa kết nối</span>
+          </div>
         </div>
       </div>
 
-      <div class="status-bar">
-        <div class="status-item">
-          <div class="status-dot" id="espStatus"></div>
-          <span id="espStatusText">ESP: Chưa kết nối</span>
+      <div class="right-wrap">
+        <!-- Theme toggle -->
+        <div class="theme-toggle" title="Chuyển sáng/tối">
+          <span class="label"><i class="fa-solid fa-moon"></i></span>
+          <div class="switch" id="themeSwitch" aria-label="toggle theme">
+            <div class="knob"></div>
+          </div>
+          <span class="label"><i class="fa-solid fa-sun"></i></span>
         </div>
-      </div>
 
-      <div class="search-container">
-        <div class="search-box">
-          <i class="fas fa-search search-icon"></i>
-          <input
-            type="text"
-            id="searchInput"
-            class="search-input-custom"
-            placeholder="Tìm kiếm địa điểm..."
-            autocomplete="off"
-          />
-          <i class="fas fa-chevron-down arrow-icon"></i>
+        <!-- Search -->
+        <div class="search-container">
+          <div class="search-box">
+            <i class="fas fa-search search-icon"></i>
+            <input
+              type="text"
+              id="searchInput"
+              class="search-input-custom"
+              placeholder="Tìm kiếm địa điểm..."
+              autocomplete="off"
+            />
+            <i class="fas fa-chevron-down arrow-icon"></i>
+          </div>
+          <ul class="dropdown-list" id="dropdownList"></ul>
         </div>
-        <ul class="dropdown-list" id="dropdownList">
-          <!-- JS sẽ render options -->
-        </ul>
       </div>
     </div>
 
     <div class="container">
+      <!-- STATION 1 -->
       <div id="station1Section">
         <div class="sensor-status">
-          <div class="sensor-title">
+          <div class="section-title">
             <i class="fas fa-microchip"></i> ESP32 Real-time
           </div>
 
@@ -478,17 +808,16 @@
               <div class="sensor-unit">µg/m³</div>
             </div>
 
-            <!-- ✅ SỬA: không ghi LoRa nữa -->
             <div class="sensor-box co2">
               <div class="sensor-label">🔋 Chỉ số AQI</div>
               <div class="sensor-value" id="sensorCO2">--</div>
               <div class="sensor-unit">Chỉ số AQI</div>
               <div
                 style="
-                  font-size: 0.75rem;
+                  font-size: 0.78rem;
                   color: var(--primary);
-                  margin-top: 5px;
-                  font-weight: 600;
+                  margin-top: 6px;
+                  font-weight: 900;
                 "
                 id="airQuality"
               >
@@ -496,14 +825,9 @@
               </div>
             </div>
 
-            <!-- ✅ SỬA: không ghi LoRa nữa -->
             <div class="sensor-box rain">
               <div class="sensor-label">🌧️ Trạng Thái Mưa</div>
-              <div
-                class="sensor-value"
-                id="sensorRain"
-                style="font-size: 1.2rem"
-              >
+              <div class="sensor-value" id="sensorRain" style="font-size: 1.2rem">
                 --
               </div>
               <div class="sensor-unit">Cảm biến mưa</div>
@@ -524,7 +848,10 @@
         </div>
 
         <div class="hero-weather">
-          <div class="station-badge">🔴 TRẠM 1 - TRẠM CHÍNH</div>
+          <div class="station-badge">
+            <i class="fa-solid fa-tower-broadcast"></i> TRẠM 1 - TRẠM CHÍNH
+          </div>
+
           <div class="location-title">
             <h2 id="locationName">TRẠM 1 - ĐÀ NẴNG</h2>
           </div>
@@ -547,25 +874,73 @@
               </div>
             </div>
           </div>
+
+          <div class="forecast-section">
+            <div class="forecast-title">
+              <i class="fas fa-calendar"></i> 📅 Dự Báo 4 Ngày (OpenWeatherMap)
+            </div>
+
+            <div class="forecast-grid" id="forecastGrid">
+              <div class="forecast-card">
+                <div class="forecast-day">Đang tải...</div>
+              </div>
+            </div>
+
+            <div class="chart-container">
+              <canvas id="forecastChart"></canvas>
+            </div>
+          </div>
         </div>
 
-        <div class="forecast-section">
-          <div class="forecast-title">
-            <i class="fas fa-calendar"></i> 📅 Dự Báo 4 Ngày (OpenWeatherMap)
-          </div>
+        <!-- ✅ HISTORY BLOCK (new) -->
+        <div class="history-block" id="historyBlock">
+          <div class="history-header">
+            <div>
+              <div class="section-title" style="margin: 0">
+                <i class="fa-solid fa-clock-rotate-left"></i> LỊCH SỬ CẢM BIẾN (TRẠM 1)
+              </div>
+              <div class="history-note" id="historyNote">
+                Chọn khoảng thời gian để xem biểu đồ lịch sử từ dữ liệu cảm biến.
+              </div>
+            </div>
 
-          <div class="forecast-grid" id="forecastGrid">
-            <div class="forecast-card">
-              <div class="forecast-day">Đang tải...</div>
+            <div class="history-actions">
+              <div class="chip-group" id="historyRange">
+                <button class="chip active" data-range="1h">1 giờ</button>
+                <button class="chip" data-range="6h">6 giờ</button>
+                <button class="chip" data-range="24h">24 giờ</button>
+                <button class="chip" data-range="7d">7 ngày</button>
+              </div>
             </div>
           </div>
 
-          <div class="chart-container">
-            <canvas id="forecastChart"></canvas>
+          <div class="history-grid">
+            <!-- Main chart: temp + hum -->
+            <div class="history-card">
+              <div class="card-title">
+                <i class="fa-solid fa-chart-line"></i> Nhiệt độ &amp; Độ ẩm
+              </div>
+              <div class="sub">Biểu đồ lịch sử từ MongoDB (dữ liệu cảm biến)</div>
+              <div class="history-chart">
+                <canvas id="historyTempHumChart"></canvas>
+              </div>
+            </div>
+
+            <!-- Secondary chart: dust or AQI, plus rain -->
+            <div class="history-card">
+              <div class="card-title">
+                <i class="fa-solid fa-wind"></i> PM2.5 / AQI &amp; Mưa
+              </div>
+              <div class="sub">Gợi ý: PM2.5 (line) + Mưa (bar 0/1)</div>
+              <div class="history-chart" style="height: 230px">
+                <canvas id="historyDustRainChart"></canvas>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
+      <!-- OTHER LOCATION -->
       <div id="otherLocationSection" style="display: none">
         <div class="hero-weather">
           <div class="location-title">
@@ -606,25 +981,26 @@
               </div>
             </div>
           </div>
-        </div>
 
-        <div class="forecast-section">
-          <div class="forecast-title">
-            <i class="fas fa-calendar"></i> 📅 Dự Báo 4 Ngày (OpenWeatherMap)
-          </div>
-
-          <div class="forecast-grid" id="otherForecastGrid">
-            <div class="forecast-card">
-              <div class="forecast-day">Đang tải...</div>
+          <div class="forecast-section">
+            <div class="forecast-title">
+              <i class="fas fa-calendar"></i> 📅 Dự Báo 4 Ngày (OpenWeatherMap)
             </div>
-          </div>
 
-          <div class="chart-container">
-            <canvas id="otherForecastChart"></canvas>
+            <div class="forecast-grid" id="otherForecastGrid">
+              <div class="forecast-card">
+                <div class="forecast-day">Đang tải...</div>
+              </div>
+            </div>
+
+            <div class="chart-container">
+              <canvas id="otherForecastChart"></canvas>
+            </div>
           </div>
         </div>
       </div>
 
+      <!-- Bottom detail cards -->
       <div class="detail-grid">
         <div class="detail-card">
           <div>
@@ -634,18 +1010,51 @@
         </div>
         <div class="detail-card">
           <div>
-            <i class="fas fa-cloud"></i
-            ><span class="detail-title">Độ Phủ Mây</span>
+            <i class="fas fa-cloud"></i><span class="detail-title">Độ Phủ Mây</span>
           </div>
           <div class="detail-value"><span id="clouds">--</span>%</div>
         </div>
       </div>
+
+      <div class="footer">
+        <div class="info">
+          Sinh viên thực hiện: <b>Lê Ngọc Hảo</b> <br />
+          Giảng viên hướng dẫn: <b>T.S Đỗ Viết Ơn</b>
+        </div>
+      </div>
     </div>
 
-    <div class="footer">
-      <div class="info">© 2026 Lê Ngọc Hảo, All rights reserved.</div>
-    </div>
+    <script>
+      // ✅ Theme toggle logic (HTML-only, JS nhỏ)
+      (function () {
+        const body = document.body;
+        const sw = document.getElementById("themeSwitch");
 
+        function setTheme(theme) {
+          body.setAttribute("data-theme", theme);
+          if (sw) sw.classList.toggle("on", theme === "light");
+          try {
+            localStorage.setItem("theme", theme);
+          } catch (e) {}
+        }
+
+        // init from storage
+        let saved = "dark";
+        try {
+          saved = localStorage.getItem("theme") || "dark";
+        } catch (e) {}
+        setTheme(saved);
+
+        if (sw) {
+          sw.addEventListener("click", () => {
+            const cur = body.getAttribute("data-theme") || "dark";
+            setTheme(cur === "dark" ? "light" : "dark");
+          });
+        }
+      })();
+    </script>
+
+    <!-- frontend logic -->
     <script src="/index.js"></script>
   </body>
 </html>

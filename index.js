@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
-const mongoose = require("mongoose"); // ✅ THÊM
+const mongoose = require("mongoose");
 
 const app = express();
 app.use(cors());
@@ -14,7 +14,31 @@ const CITY = process.env.CITY || "Da Nang";
 
 const http = axios.create({ timeout: 10000 });
 
-// ================== ✅ MongoDB: Schema + TTL 30 ngày ==================
+// ================== Helpers ==================
+function toNum(v, fallback = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function parseRangeMs(range) {
+  const map = {
+    "1h": 1 * 60 * 60 * 1000,
+    "6h": 6 * 60 * 60 * 1000,
+    "24h": 24 * 60 * 60 * 1000,
+    "7d": 7 * 24 * 60 * 60 * 1000,
+  };
+  return map[String(range || "").toLowerCase()] || null;
+}
+
+function isDbConnected() {
+  return mongoose.connection.readyState === 1; // 1 = connected
+}
+
+function isValidDate(d) {
+  return d instanceof Date && !isNaN(d.getTime());
+}
+
+// ================== MongoDB: Schema + TTL 30 ngày ==================
 const SensorReadingSchema = new mongoose.Schema(
   {
     stationId: { type: String, default: "station1", index: true },
@@ -25,7 +49,7 @@ const SensorReadingSchema = new mongoose.Schema(
     rainStatus: Number,
     uvIndex: Number,
   },
-  { timestamps: true } // createdAt / updatedAt
+  { timestamps: true }
 );
 
 // ✅ tự xoá sau 30 ngày
@@ -33,23 +57,30 @@ SensorReadingSchema.index(
   { createdAt: 1 },
   { expireAfterSeconds: 60 * 60 * 24 * 30 }
 );
+
 // ✅ tối ưu query
 SensorReadingSchema.index({ stationId: 1, createdAt: -1 });
 
 const SensorReading = mongoose.model("SensorReading", SensorReadingSchema);
 
-// ================== ✅ Rule lưu lịch sử: 1 phút/lần + biến động lớn ==================
+// ================== Rule lưu lịch sử: 1 phút/lần + biến động lớn ==================
 let lastSavedAt = 0;
 let lastSavedSnapshot = null;
 
-// Ngưỡng “biến động lớn” (bạn có thể chỉnh lại cho hợp)
+// Ngưỡng “biến động lớn”
 const THRESH = {
   temp: 0.8, // °C
   hum: 4, // %
   dust: 8, // µg/m³
-  aqi: 20, // co2Level (bạn đang dùng như AQI)
+  aqi: 20, // co2Level (bạn dùng như AQI)
   uv: 1.0, // UV
 };
+
+// có thể chỉnh bằng ENV nếu muốn
+const HISTORY_MIN_INTERVAL_MS = toNum(
+  process.env.HISTORY_MIN_INTERVAL_MS,
+  60_000
+);
 
 let sensorData = {
   temperature: 0,
@@ -93,67 +124,74 @@ function owmAqiText(aqi1to5) {
 }
 
 // ================== ESP32 push ==================
-app.post("/update-sensor", (req, res) => {
-  const b = req.body || {};
+app.post("/update-sensor", async (req, res) => {
+  try {
+    const b = req.body || {};
 
-  // ✅ chịu nhiều key UV để khỏi kẹt nếu ESP gửi khác tên
-  const uvRaw =
-    b.uvIndex ?? b.uv ?? b.uv_value ?? b.uvValue ?? sensorData.uvIndex ?? 0;
+    const uvRaw =
+      b.uvIndex ?? b.uv ?? b.uv_value ?? b.uvValue ?? sensorData.uvIndex ?? 0;
 
-  sensorData = {
-    temperature: Number(b.temperature ?? sensorData.temperature ?? 0),
-    humidity: Number(b.humidity ?? sensorData.humidity ?? 0),
-    dustDensity: Number(b.dustDensity ?? sensorData.dustDensity ?? 0),
-    co2Level: Number(b.co2Level ?? sensorData.co2Level ?? 0),
-    rainStatus: Number(b.rainStatus ?? sensorData.rainStatus ?? 0),
-    uvIndex: Number(uvRaw),
-    lastUpdate: Date.now(),
-  };
+    sensorData = {
+      temperature: toNum(b.temperature, sensorData.temperature || 0),
+      humidity: toNum(b.humidity, sensorData.humidity || 0),
+      dustDensity: toNum(b.dustDensity, sensorData.dustDensity || 0),
+      co2Level: toNum(b.co2Level, sensorData.co2Level || 0),
+      rainStatus: toNum(b.rainStatus, sensorData.rainStatus || 0),
+      uvIndex: toNum(uvRaw, sensorData.uvIndex || 0),
+      lastUpdate: Date.now(),
+    };
 
-  // ================== ✅ Lưu MongoDB theo rule ==================
-  const now = Date.now();
-  const dueByTime = now - lastSavedAt >= 60_000; // 1 phút
+    // ================== Lưu MongoDB theo rule ==================
+    const now = Date.now();
+    const dueByTime = now - lastSavedAt >= HISTORY_MIN_INTERVAL_MS;
 
-  let dueBySpike = false;
+    let dueBySpike = false;
 
-  if (lastSavedSnapshot) {
-    const dt = Math.abs(sensorData.temperature - lastSavedSnapshot.temperature);
-    const dh = Math.abs(sensorData.humidity - lastSavedSnapshot.humidity);
-    const dd = Math.abs(sensorData.dustDensity - lastSavedSnapshot.dustDensity);
-    const da = Math.abs(sensorData.co2Level - lastSavedSnapshot.co2Level);
-    const du = Math.abs(sensorData.uvIndex - lastSavedSnapshot.uvIndex);
-    const rainChanged = sensorData.rainStatus !== lastSavedSnapshot.rainStatus;
+    if (lastSavedSnapshot) {
+      const dt = Math.abs(sensorData.temperature - lastSavedSnapshot.temperature);
+      const dh = Math.abs(sensorData.humidity - lastSavedSnapshot.humidity);
+      const dd = Math.abs(sensorData.dustDensity - lastSavedSnapshot.dustDensity);
+      const da = Math.abs(sensorData.co2Level - lastSavedSnapshot.co2Level);
+      const du = Math.abs(sensorData.uvIndex - lastSavedSnapshot.uvIndex);
+      const rainChanged = sensorData.rainStatus !== lastSavedSnapshot.rainStatus;
 
-    dueBySpike =
-      rainChanged ||
-      dt >= THRESH.temp ||
-      dh >= THRESH.hum ||
-      dd >= THRESH.dust ||
-      da >= THRESH.aqi ||
-      du >= THRESH.uv;
-  } else {
-    // lần đầu có data → lưu luôn
-    dueBySpike = true;
+      dueBySpike =
+        rainChanged ||
+        dt >= THRESH.temp ||
+        dh >= THRESH.hum ||
+        dd >= THRESH.dust ||
+        da >= THRESH.aqi ||
+        du >= THRESH.uv;
+    } else {
+      dueBySpike = true; // lần đầu có data → lưu luôn
+    }
+
+    if ((dueByTime || dueBySpike) && isDbConnected()) {
+      const doc = {
+        stationId: "station1",
+        temperature: sensorData.temperature,
+        humidity: sensorData.humidity,
+        dustDensity: sensorData.dustDensity,
+        co2Level: sensorData.co2Level,
+        rainStatus: sensorData.rainStatus,
+        uvIndex: sensorData.uvIndex,
+      };
+
+      try {
+        await SensorReading.create(doc);
+        lastSavedAt = now; // ✅ chỉ update khi save OK
+        lastSavedSnapshot = { ...doc };
+      } catch (err) {
+        console.error("❌ Mongo save error:", err?.message || err);
+      }
+    }
+
+    console.log("📡 ESP32:", sensorData);
+    return res.sendStatus(200);
+  } catch (e) {
+    console.error("❌ update-sensor error:", e?.message || e);
+    return res.sendStatus(500);
   }
-
-  // chỉ lưu nếu DB đang connected
-  if ((dueByTime || dueBySpike) && mongoose.connection.readyState === 1) {
-    lastSavedAt = now;
-    lastSavedSnapshot = { ...sensorData };
-
-    SensorReading.create({
-      stationId: "station1",
-      temperature: sensorData.temperature,
-      humidity: sensorData.humidity,
-      dustDensity: sensorData.dustDensity,
-      co2Level: sensorData.co2Level,
-      rainStatus: sensorData.rainStatus,
-      uvIndex: sensorData.uvIndex,
-    }).catch((err) => console.error("❌ Mongo save error:", err.message));
-  }
-
-  console.log("📡 ESP32:", sensorData);
-  res.sendStatus(200);
 });
 
 // GET sensor + trạng thái online/offline chuẩn
@@ -161,50 +199,57 @@ app.get("/get-sensor", (req, res) => {
   const now = Date.now();
   const ageMs = now - (sensorData.lastUpdate || 0);
   const espOnline = !!sensorData.lastUpdate && ageMs <= 15000;
-
   res.json({ ...sensorData, espOnline, ageMs });
 });
 
-// ================== ✅ API LỊCH SỬ ==================
-// GET /api/history?stationId=station1&limit=200
-// GET /api/history?from=2026-01-01&to=2026-01-02&limit=1000
+// ================== ✅ API LỊCH SỬ (CHỈNH THEO FRONTEND) ==================
+// Frontend gọi: /api/history?stationId=station1&from=...&to=...&limit=...
+// Frontend đọc: json.rows
 app.get("/api/history", async (req, res) => {
   try {
-    if (mongoose.connection.readyState !== 1) {
-      return res
-        .status(503)
-        .json({ ok: false, error: "MongoDB not connected" });
+    if (!isDbConnected()) {
+      return res.status(503).json({ ok: false, error: "MongoDB not connected" });
     }
 
     const stationId = req.query.stationId || "station1";
-    const limit = Math.min(parseInt(req.query.limit || "200", 10), 2000);
+    const limit = Math.min(parseInt(req.query.limit || "200", 10), 3000);
+
+    // ✅ mặc định ASC để chart vẽ đúng (cũ -> mới)
+    const order = String(req.query.order || "asc").toLowerCase(); // asc|desc
 
     const from = req.query.from ? new Date(req.query.from) : null;
     const to = req.query.to ? new Date(req.query.to) : null;
 
+    const rangeMs = parseRangeMs(req.query.range);
+
     const filter = { stationId };
+
+    // ưu tiên from/to (vì frontend đang dùng)
     if (from || to) {
-      filter.createdAt = {};
-      if (from) filter.createdAt.$gte = from;
-      if (to) filter.createdAt.$lte = to;
+      const createdAt = {};
+      if (from && isValidDate(from)) createdAt.$gte = from;
+      if (to && isValidDate(to)) createdAt.$lte = to;
+      if (Object.keys(createdAt).length) filter.createdAt = createdAt;
+    } else if (rangeMs) {
+      filter.createdAt = { $gte: new Date(Date.now() - rangeMs) };
     }
 
     const rows = await SensorReading.find(filter)
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: order === "desc" ? -1 : 1 })
       .limit(limit)
       .lean();
 
-    // trả về theo thứ tự cũ -> mới cho dễ vẽ chart
-    res.json({ ok: true, rows: rows.reverse() });
+    // ✅ trả rows để khớp frontend, giữ data để tương thích nếu code cũ có dùng
+    res.json({ ok: true, rows, data: rows });
   } catch (err) {
     console.error("❌ history error:", err?.message || err);
     res.status(500).json({ ok: false, error: "history error" });
   }
 });
 
-// (tuỳ chọn) kiểm tra DB
+// kiểm tra DB
 app.get("/db-ping", (req, res) => {
-  res.json({ ok: true, state: mongoose.connection.readyState }); // 1 = connected
+  res.json({ ok: true, state: mongoose.connection.readyState });
 });
 
 // ================== OpenWeather fetchers ==================
@@ -238,14 +283,13 @@ async function fetchAirPollution(lat, lon) {
   const r = await http.get(url);
   const item = r.data?.list?.[0];
   return {
-    aqi: item?.main?.aqi ?? null, // 1..5
-    components: item?.components || null, // pm2_5, pm10...
+    aqi: item?.main?.aqi ?? null,
+    components: item?.components || null,
   };
 }
 
-// ================== ✅ UV from Open-Meteo (no key) ==================
+// ================== UV from Open-Meteo (no key) ==================
 async function fetchUvFromOpenMeteo(lat, lon) {
-  // Air Quality API current uv_index
   const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=uv_index&timezone=Asia/Ho_Chi_Minh`;
   const r = await http.get(url);
   const uvi = r.data?.current?.uv_index;
@@ -253,11 +297,9 @@ async function fetchUvFromOpenMeteo(lat, lon) {
 }
 
 /**
- * GET /api/metrics?city=Da%20Nang
- * hoặc /api/metrics?lat=...&lon=...
- *
- * - AQI/PM: OpenWeather air_pollution (giữ nguyên)
- * - UV: Open-Meteo uv_index (không cần key)
+ * GET /api/metrics?city=...
+ * - AQI/PM: OpenWeather air_pollution
+ * - UV: Open-Meteo uv_index
  */
 app.get("/api/metrics", async (req, res) => {
   try {
@@ -291,12 +333,10 @@ app.get("/api/metrics", async (req, res) => {
       });
     }
 
-    // ✅ AQI/PM: OpenWeather
     const air = await withCache(`air:${lat},${lon}`, 2 * 60 * 1000, () =>
       fetchAirPollution(lat, lon)
     );
 
-    // ✅ UV: Open-Meteo (no key)
     const uvi = await withCache(`uvmeteo:${lat},${lon}`, 5 * 60 * 1000, () =>
       fetchUvFromOpenMeteo(lat, lon)
     );
@@ -305,7 +345,6 @@ app.get("/api/metrics", async (req, res) => {
       city: weather?.name || (city || null),
       coord: { lat, lon },
 
-      // trả thêm weather để frontend tiện dùng (không bắt buộc)
       weather: weather
         ? {
             temp: weather.main.temp,
@@ -320,14 +359,14 @@ app.get("/api/metrics", async (req, res) => {
         : null,
 
       air: {
-        aqi: air?.aqi ?? null, // 1..5
+        aqi: air?.aqi ?? null,
         text: air?.aqi ? owmAqiText(air.aqi) : null,
         pm2_5: air?.components?.pm2_5 ?? null,
         pm10: air?.components?.pm10 ?? null,
       },
 
       uv: {
-        uvi: uvi, // number|null
+        uvi: uvi,
         text: typeof uvi === "number" ? uvText(uvi) : null,
       },
     });
@@ -337,7 +376,7 @@ app.get("/api/metrics", async (req, res) => {
   }
 });
 
-// ================== Prediction (station 1) giữ nguyên ==================
+// ================== Prediction giữ nguyên ==================
 async function buildPrediction() {
   const ow = await http.get(
     `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
@@ -429,12 +468,12 @@ function getRecommendation(temp, owMain, rainChance) {
   return "✅ Thời tiết ổn định";
 }
 
-// ================== ✅ Connect MongoDB trước khi listen ==================
+// ================== Connect MongoDB trước khi listen ==================
 async function start() {
   const PORT = process.env.PORT || 3000;
 
   if (!process.env.MONGO_URI) {
-    console.warn("⚠️ MONGO_URI chưa set -> vẫn chạy web nhưng không lưu lịch sử!");
+    console.warn("⚠️ MONGO_URI chưa set -> vẫn chạy web nhưng KHÔNG lưu lịch sử!");
   } else {
     await mongoose.connect(process.env.MONGO_URI, {
       serverSelectionTimeoutMS: 10000,
