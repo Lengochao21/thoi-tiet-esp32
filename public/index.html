@@ -99,7 +99,7 @@
         letter-spacing: 0.2px;
       }
 
-      /* ✅ Intro lines */
+      /* Intro lines */
       .intro-lines {
         display: flex;
         flex-direction: column;
@@ -366,7 +366,7 @@
         box-shadow: 0 16px 26px -18px var(--shadow);
       }
 
-      /* ✅ 7 ô: desktop sẽ ra 4 ô hàng 1 + 3 ô hàng 2 */
+      /* 7 ô */
       .sensor-grid {
         display: grid;
         grid-template-columns: repeat(4, minmax(180px, 1fr));
@@ -628,7 +628,7 @@
         line-height: 1.55rem;
       }
 
-      /* ✅ History Modal (màn hình riêng) */
+      /* History Modal */
       .modal-backdrop {
         position: fixed;
         inset: 0;
@@ -897,12 +897,6 @@
           <span class="label"><i class="fa-solid fa-sun"></i></span>
         </div>
 
-        <!-- ✅ Chuông (thông báo) -->
-        <button class="control-btn" id="bellBtn" title="Bật thông báo cảnh báo">
-          <i class="fa-solid fa-bell"></i>
-          <span id="bellText">Chuông</span>
-        </button>
-
         <!-- ✅ Lịch sử -->
         <button class="control-btn" id="historyBtn" title="Xem lịch sử cảm biến">
           <i class="fa-solid fa-clock-rotate-left"></i> Lịch sử
@@ -1122,7 +1116,7 @@
       </div>
     </div>
 
-    <!-- ✅ HISTORY MODAL -->
+    <!-- HISTORY MODAL -->
     <div class="modal-backdrop" id="historyModal">
       <div class="modal" role="dialog" aria-modal="true">
         <div class="modal-header">
@@ -1142,7 +1136,7 @@
               <button class="chip" data-range="7d">7 ngày</button>
             </div>
             <div class="modal-note" id="historyNote">
-              Chọn mốc thời gian để xem biểu đồ + bảng (ngắn gọn).
+              Chọn mốc thời gian để xem biểu đồ + bảng (mới nhất ưu tiên).
             </div>
           </div>
 
@@ -1201,7 +1195,7 @@
     </div>
 
     <script>
-      // ✅ Theme toggle logic
+      // Theme toggle logic
       (function () {
         const body = document.body;
         const sw = document.getElementById("themeSwitch");
@@ -1228,7 +1222,7 @@
         }
       })();
 
-      // ✅ Modal open/close (logic load data nằm trong index.js)
+      // Modal open/close (logic load data nằm trong index.js)
       (function () {
         const modal = document.getElementById("historyModal");
         const btn = document.getElementById("historyBtn");
@@ -1238,7 +1232,6 @@
           if (!modal) return;
           modal.classList.add("show");
           document.body.style.overflow = "hidden";
-          // gọi hook cho index.js (nếu có)
           if (window.__openHistory) window.__openHistory();
         }
         function closeModal() {
